@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/ever-guild/quality-bash/internal/install"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -48,7 +50,22 @@ func run() error {
 		triplet = "aarch64-linux-gnu"
 	}
 	var sums strings.Builder
+	versions := map[string]string{}
+	patterns := map[string]string{"bash": `version (5\.2\.21[^\s]*)`, "bats": `Bats (1\.10\.0)(?:\s|$)`, "shellcheck": `version: (0\.9\.0)(?:\s|$)`, "kcov": `kcov (43)(?:\s|$)`}
 	for _, name := range []string{"bash", "bats", "shellcheck", "kcov"} {
+		binaryPath := filepath.Join("/usr/bin", name)
+		if name == "kcov" {
+			binaryPath = *kcov
+		}
+		versionOutput, versionErr := exec.Command(binaryPath, "--version").CombinedOutput()
+		if versionErr != nil {
+			return fmt.Errorf("version check %s: %w", name, versionErr)
+		}
+		match := regexp.MustCompile(patterns[name]).FindStringSubmatch(string(versionOutput))
+		if len(match) != 2 {
+			return fmt.Errorf("unexpected %s version: %s", name, versionOutput)
+		}
+		versions[name] = match[1]
 		root := filepath.Join(temp, name)
 		if name == "bats" {
 			for _, dir := range []string{"bin", "lib", "libexec"} {
@@ -126,5 +143,12 @@ func run() error {
 		}
 		fmt.Fprintf(&sums, "%s  %s\n", sum, archive)
 	}
-	return os.WriteFile(filepath.Join(*output, "SHA256SUMS"), []byte(sums.String()), 0644)
+	if err = os.WriteFile(filepath.Join(*output, "SHA256SUMS"), []byte(sums.String()), 0644); err != nil {
+		return err
+	}
+	metadata, err := json.MarshalIndent(versions, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(*output, "versions-"+runtime.GOARCH+".json"), metadata, 0644)
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -23,8 +24,15 @@ func run() error {
 	output := flag.String("output", "tools-manifest.json", "manifest destination")
 	flag.Parse()
 	manifest := install.Manifest{Schema: 1}
-	versions := map[string]string{"bash": "5.2.21", "bats": "1.10.0", "shellcheck": "0.9.0", "kcov": "43"}
 	for _, arch := range []string{"amd64", "arm64"} {
+		data, err := os.ReadFile(filepath.Join(*dir, "versions-"+arch+".json"))
+		if err != nil {
+			return err
+		}
+		var versions map[string]string
+		if err = json.Unmarshal(data, &versions); err != nil {
+			return err
+		}
 		for _, name := range []string{"bash", "bats", "shellcheck", "kcov"} {
 			filename := name + "-linux-" + arch + ".tar.gz"
 			file, err := os.Open(filepath.Join(*dir, filename))
@@ -37,7 +45,12 @@ func run() error {
 			if err != nil {
 				return err
 			}
-			manifest.Packages = append(manifest.Packages, install.Package{Name: name, Version: versions[name], OS: "linux", Arch: arch, URL: "https://github.com/ever-guild/quality-bash/releases/download/" + *release + "/" + filename, SHA256: fmt.Sprintf("%x", hash.Sum(nil)), Executables: []string{"bin/" + name}})
+			version := versions[name]
+			// Bash's printed build token contains parentheses, unsuitable for cache IDs.
+			if name == "bash" && strings.HasPrefix(version, "5.2.21(") {
+				version = "5.2.21"
+			}
+			manifest.Packages = append(manifest.Packages, install.Package{Name: name, Version: version, OS: "linux", Arch: arch, URL: "https://github.com/ever-guild/quality-bash/releases/download/" + *release + "/" + filename, SHA256: fmt.Sprintf("%x", hash.Sum(nil)), Executables: []string{"bin/" + name}})
 		}
 	}
 	data, err := json.MarshalIndent(manifest, "", "  ")
