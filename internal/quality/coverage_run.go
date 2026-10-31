@@ -30,7 +30,7 @@ func (r Runner) Coverage(ctx context.Context, s Selection) (CoverageReport, erro
 		}
 		includes = append(includes, path)
 	}
-	args := []string{"--bash-method=PS4", "--include-path=" + strings.Join(includes, ","), "--bash-parse-files-in-dir=" + r.Root, output, bats, "--formatter", "tap"}
+	args := []string{"--bash-method=PS4", "--bash-dont-parse-binary-dir", "--include-path=" + strings.Join(includes, ","), "--bash-parse-files-in-dir=" + r.Root, output, bats, "--formatter", "tap"}
 	for _, test := range s.Tests {
 		args = append(args, filepath.Join(r.Root, test))
 	}

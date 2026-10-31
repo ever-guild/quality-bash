@@ -47,6 +47,22 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Resolve report path
+      id: reports
+      shell: bash
+      env:
+        QB_ROOT: ${{ inputs.root }}
+        QB_REPORTS: ${{ inputs.reports }}
+      run: |
+        case "$QB_REPORTS" in
+          /*) path="$QB_REPORTS" ;;
+          *) path="$QB_ROOT/$QB_REPORTS" ;;
+        esac
+        if [[ "$path" == *$'\n'* || "$path" == *$'\r'* ]]; then
+          echo 'Report paths containing newlines are unsupported by the Action' >&2
+          exit 1
+        fi
+        echo "path=$path" >> "$GITHUB_OUTPUT"
     - name: Download release binary
       id: binary
       shell: bash
@@ -108,5 +124,5 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: quality-bash-${{ github.job }}-${{ github.run_attempt }}
-        path: ${{ inputs.root }}/${{ inputs.reports }}
+        path: ${{ steps.reports.outputs.path }}
         if-no-files-found: ignore
