@@ -30,6 +30,8 @@ jobs:
         run: PATH="$RUNNER_TEMP/kcov/bin:$PATH" go test -race -count=1 -v ./...
       - name: Package external tools
         run: go run ./cmd/bundle-tools --kcov "$RUNNER_TEMP/kcov/bin/kcov" --output tool-dist
+      - name: Verify packaged tools
+        run: go run ./cmd/check-tool-bundles --directory tool-dist
       - uses: actions/upload-artifact@v4
         with:
           name: tools-${{ runner.arch }}
