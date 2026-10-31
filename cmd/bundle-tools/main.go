@@ -82,6 +82,12 @@ func run() error {
 		if err = os.MkdirAll(licenses, 0755); err != nil {
 			return err
 		}
+		if name == "kcov" {
+			upstream := filepath.Join(filepath.Dir(filepath.Dir(*kcov)), "share", "licenses", "kcov")
+			if err = install.CopyTree(upstream, filepath.Join(licenses, "kcov")); err != nil {
+				return err
+			}
+		}
 		entries, err := os.ReadDir("/usr/share/doc")
 		if err != nil {
 			return err
@@ -96,8 +102,22 @@ func run() error {
 				return err
 			}
 		}
-		if err = install.CopyTree("/usr/share/common-licenses", filepath.Join(licenses, "common")); err != nil {
+		common := filepath.Join(licenses, "common")
+		if err = os.MkdirAll(common, 0755); err != nil {
 			return err
+		}
+		commonEntries, readErr := os.ReadDir("/usr/share/common-licenses")
+		if readErr != nil {
+			return readErr
+		}
+		for _, entry := range commonEntries {
+			data, readErr := os.ReadFile(filepath.Join("/usr/share/common-licenses", entry.Name()))
+			if readErr != nil {
+				return readErr
+			}
+			if err = os.WriteFile(filepath.Join(common, entry.Name()), data, 0644); err != nil {
+				return err
+			}
 		}
 		archive := name + "-linux-" + runtime.GOARCH + ".tar.gz"
 		sum, err := install.PackDirectory(root, filepath.Join(*output, archive))

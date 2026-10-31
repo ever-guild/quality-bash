@@ -63,5 +63,25 @@ func run() error {
 			return fmt.Errorf("cmake failed: %+v", result)
 		}
 	}
+	licenseDir := filepath.Join(abs, "share", "licenses", "kcov")
+	if err = os.MkdirAll(licenseDir, 0755); err != nil {
+		return err
+	}
+	for _, name := range []string{"COPYING", "COPYING.externals"} {
+		data, readErr := os.ReadFile(filepath.Join(source, "kcov-43", name))
+		if readErr != nil {
+			return readErr
+		}
+		if err = os.WriteFile(filepath.Join(licenseDir, name), data, 0644); err != nil {
+			return err
+		}
+	}
+	data, err := os.ReadFile(archive)
+	if err != nil {
+		return err
+	}
+	if err = os.WriteFile(filepath.Join(licenseDir, "kcov-43-source.tar.gz"), data, 0644); err != nil {
+		return err
+	}
 	return nil
 }
