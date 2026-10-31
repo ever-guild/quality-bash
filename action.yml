@@ -69,6 +69,11 @@ runs:
         sha256sum --check selected.sha256
         tar -xzf "$asset"
         echo "path=$directory/quality-bash" >> "$GITHUB_OUTPUT"
+    - name: Install pinned tools
+      shell: bash
+      env:
+        QB_BINARY: ${{ steps.binary.outputs.path }}
+      run: '"$QB_BINARY" tools install'
     - name: Run quality checks
       id: check
       shell: bash

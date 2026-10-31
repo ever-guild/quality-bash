@@ -65,13 +65,17 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	if flags.NArg() != 0 {
 		return fmt.Errorf("unexpected positional arguments")
 	}
-	if command == "tools install" || *toolsManifest != "" {
-		if *toolsManifest == "" {
-			return fmt.Errorf("release tool manifest is not yet bundled; development builds require --tools-manifest")
+	if command == "tools install" || *toolsManifest != "" || len(install.BundledManifest) != 0 {
+		data := install.BundledManifest
+		if *toolsManifest != "" {
+			var readErr error
+			data, readErr = os.ReadFile(*toolsManifest)
+			if readErr != nil {
+				return readErr
+			}
 		}
-		data, readErr := os.ReadFile(*toolsManifest)
-		if readErr != nil {
-			return readErr
+		if len(data) == 0 {
+			return fmt.Errorf("release tool manifest is not yet bundled; development builds require --tools-manifest")
 		}
 		manifest, manifestErr := install.ParseManifest(data)
 		if manifestErr != nil {
