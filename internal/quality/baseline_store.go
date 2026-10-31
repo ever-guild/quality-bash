@@ -32,12 +32,22 @@ func ReadJSON(path string, target any) error {
 	return nil
 }
 func WriteJSON(path string, value any) error {
+	if err := rejectSymlinkComponents(path); err != nil {
+		return err
+	}
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err
 	}
 	data = append(data, '\n')
-	file, err := os.CreateTemp(filepath.Dir(path), ".quality-bash-*")
+	directory, err := openOutputDirectory(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	// Linux procfs refers to the retained directory inode, not its mutable name.
+	anchored := fmt.Sprintf("/proc/self/fd/%d", directory.Fd())
+	file, err := os.CreateTemp(anchored, ".quality-bash-*")
 	if err != nil {
 		return err
 	}
@@ -54,7 +64,7 @@ func WriteJSON(path string, value any) error {
 	if err = file.Close(); err != nil {
 		return err
 	}
-	return os.Rename(name, path)
+	return os.Rename(name, filepath.Join(anchored, filepath.Base(path)))
 }
 func (m Measurement) ValidateFresh(fingerprint string) error {
 	if !m.Qualified {
@@ -91,7 +101,7 @@ func UpdateBaseline(path string, m Measurement, fingerprint string, create bool)
 		if err != nil {
 			return err
 		}
-		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		file, err := openOutputFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 		if err != nil {
 			return err
 		}

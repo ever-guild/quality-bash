@@ -156,6 +156,18 @@ func run(ctx context.Context, args []string) (returnErr error) {
 				returnErr = publishErr
 			}
 		}()
+		// Freeze policy before any project-controlled test can modify its files.
+		var previous, target quality.Baseline
+		var previousErr error
+		if command != "baseline update" {
+			previousErr = quality.ReadJSON(baselinePath, &previous)
+		}
+		if *baseRevision != "" {
+			target, err = quality.ReadGitBaseline(ctx, absRoot, baselinePath, *baseRevision, *timeout)
+			if err != nil {
+				return err
+			}
+		}
 		if command == "qa" || command == "baseline check" {
 			measurement, err = runner.Measure(ctx, selection, *jobs, baselinePath)
 		} else {
@@ -172,28 +184,19 @@ func run(ctx context.Context, args []string) (returnErr error) {
 				return quality.MigrateBaseline(baselinePath, measurement, measurement.Fingerprint, *migrate)
 			}
 			if *baseRevision != "" {
-				target, readErr := quality.ReadGitBaseline(ctx, absRoot, baselinePath, *baseRevision, *timeout)
-				if readErr != nil {
-					return readErr
-				}
 				if err = target.Check(measurement.Baseline); err != nil {
 					return err
 				}
 			}
 			return quality.UpdateBaseline(baselinePath, measurement, measurement.Fingerprint, *create)
 		}
-		var previous quality.Baseline
-		if err = quality.ReadJSON(baselinePath, &previous); err != nil {
-			return err
+		if previousErr != nil {
+			return previousErr
 		}
 		if err = previous.Check(measurement.Baseline); err != nil {
 			return err
 		}
 		if *baseRevision != "" {
-			target, readErr := quality.ReadGitBaseline(ctx, absRoot, baselinePath, *baseRevision, *timeout)
-			if readErr != nil {
-				return readErr
-			}
 			if err = target.Check(previous); err != nil {
 				return fmt.Errorf("working baseline regresses target revision: %w", err)
 			}

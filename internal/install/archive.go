@@ -16,6 +16,25 @@ import (
 )
 
 const maxArchive = 512 << 20
+const maxArchiveEntries = 10000
+
+// Unlike LimitReader, exhausting this budget is an error, never a clean EOF.
+type archiveBudgetReader struct {
+	reader    io.Reader
+	remaining int64
+}
+
+func (r *archiveBudgetReader) Read(p []byte) (int, error) {
+	if r.remaining <= 0 {
+		return 0, fmt.Errorf("archive stream exceeds byte limit")
+	}
+	if int64(len(p)) > r.remaining {
+		p = p[:r.remaining]
+	}
+	n, err := r.reader.Read(p)
+	r.remaining -= int64(n)
+	return n, err
+}
 
 func Download(ctx context.Context, url, digest, destination string) error {
 	expected, err := hex.DecodeString(digest)
@@ -92,13 +111,14 @@ func ExtractSourceTarGzip(reader io.Reader, destination, omitDirectory string) e
 	if len(entries) != 0 {
 		return fmt.Errorf("extraction destination must be empty")
 	}
-	compressed, err := gzip.NewReader(reader)
+	compressed, err := gzip.NewReader(&archiveBudgetReader{reader: reader, remaining: maxArchive})
 	if err != nil {
 		return err
 	}
 	defer compressed.Close()
-	archive := tar.NewReader(compressed)
+	archive := tar.NewReader(&archiveBudgetReader{reader: compressed, remaining: maxArchive})
 	var total int64
+	entryCount, componentCount := 0, 0
 	for {
 		header, err := archive.Next()
 		if err == io.EOF {
@@ -107,7 +127,16 @@ func ExtractSourceTarGzip(reader io.Reader, destination, omitDirectory string) e
 		if err != nil {
 			return err
 		}
+		entryCount++
+		if entryCount > maxArchiveEntries {
+			return fmt.Errorf("archive contains too many entries")
+		}
 		name := filepath.Clean(header.Name)
+		depth := strings.Count(name, string(filepath.Separator)) + 1
+		componentCount += depth
+		if len(header.Name) > 4096 || depth > 32 || componentCount > 100000 {
+			return fmt.Errorf("archive path complexity exceeds limit")
+		}
 		if filepath.IsAbs(name) || name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) {
 			return fmt.Errorf("unsafe archive path %q", header.Name)
 		}
@@ -124,10 +153,10 @@ func ExtractSourceTarGzip(reader io.Reader, destination, omitDirectory string) e
 				return err
 			}
 		case tar.TypeReg:
-			total += header.Size
-			if header.Size < 0 || total > maxArchive {
+			if header.Size < 0 || header.Size > maxArchive-total {
 				return fmt.Errorf("expanded archive too large")
 			}
+			total += header.Size
 			if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 				return err
 			}

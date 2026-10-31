@@ -70,8 +70,8 @@ runs:
         RUNNER_ARCH_VALUE: ${{ runner.arch }}
       run: |
         case "$RUNNER_ARCH_VALUE" in
-          X64) arch=amd64; digest=9af7fc3423ba6d4bd10e299196efae626184838ff63830d14fdf84d1718a8c48 ;;
-          ARM64) arch=arm64; digest=20c1a3f2f5a5661cb9469b23765a5960ad892522ef5048e3f596d4ff7c425bdc ;;
+          X64) arch=amd64; digest=d946400dbff4e09a177c2c8b34834cb649238eaace4d5529dee14049b80623b0 ;;
+          ARM64) arch=arm64; digest=474866f2e77675ea84da5cc33f545f332e19a7cdc1582f014d9b6a4680bbd37c ;;
           *) echo 'Unsupported runner architecture' >&2; exit 1 ;;
         esac
         directory=$(mktemp -d "$RUNNER_TEMP/quality-bash.XXXXXXXX")

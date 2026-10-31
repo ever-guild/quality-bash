@@ -4,10 +4,39 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestArchiveResourceLimits(t *testing.T) {
+	if err := ExtractTarGzip(bytes.NewReader(archiveBytes(t, strings.Repeat("a/", 33)+"file", tar.TypeReg)), t.TempDir()); err == nil {
+		t.Fatal("excessive path depth accepted")
+	}
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for i := 0; i <= maxArchiveEntries; i++ {
+		if err := tw.WriteHeader(&tar.Header{Name: "dir", Typeflag: tar.TypeDir, Mode: 0700}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := ExtractTarGzip(bytes.NewReader(buf.Bytes()), t.TempDir()); err == nil || !strings.Contains(err.Error(), "too many entries") {
+		t.Fatalf("entry limit not enforced: %v", err)
+	}
+	_, err := io.ReadAll(&archiveBudgetReader{reader: strings.NewReader("oversized"), remaining: 3})
+	if err == nil {
+		t.Fatal("byte budget exhaustion treated as EOF")
+	}
+}
 
 func archiveBytes(t *testing.T, name string, kind byte) []byte {
 	t.Helper()

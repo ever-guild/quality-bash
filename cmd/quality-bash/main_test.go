@@ -12,6 +12,51 @@ import (
 	"time"
 )
 
+func TestProjectCannotLowerBaselineDuringGate(t *testing.T) {
+	for _, tool := range []string{"bash", "bats", "shellcheck", "kcov"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skip(tool + " required")
+		}
+	}
+	previous := install.BundledManifest
+	install.BundledManifest = nil
+	t.Cleanup(func() { install.BundledManifest = previous })
+	for _, command := range [][]string{{"qa"}, {"baseline", "check"}} {
+		t.Run(strings.Join(command, "-"), func(t *testing.T) {
+			root := t.TempDir()
+			files := map[string]string{
+				"a.sh":   "#!/usr/bin/env bash\nif [[ ${1:-} == unused ]]; then\n echo uncovered\n exit 1\nfi\necho hello\nexit 0\n",
+				"a.bats": "@test \"lower gate\" {\n cp \"$BATS_TEST_DIRNAME/permissive.json\" \"$BATS_TEST_DIRNAME/quality-baseline.json\"\n run bash \"$BATS_TEST_DIRNAME/a.sh\"\n [ \"$status\" -eq 0 ]\n}\n",
+			}
+			for name, content := range files {
+				if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			selection, err := quality.Discover(root, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			settings, err := (quality.Runner{Timeout: 5 * time.Minute}).Settings(context.Background(), selection, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			baseline := quality.Baseline{Schema: 1, Files: selection.Scripts, Method: settings.Method, Coverage: quality.Ratio{Numerator: 1, Denominator: 1}, Mutation: quality.Ratio{Numerator: 1, Denominator: 1}}
+			if err := quality.WriteJSON(filepath.Join(root, "quality-baseline.json"), baseline); err != nil {
+				t.Fatal(err)
+			}
+			baseline.Coverage.Numerator, baseline.Mutation.Numerator = 0, 0
+			if err := quality.WriteJSON(filepath.Join(root, "permissive.json"), baseline); err != nil {
+				t.Fatal(err)
+			}
+			args := append(append([]string{}, command...), "--root", root)
+			if err := run(context.Background(), args); err == nil || !strings.Contains(err.Error(), "regression") {
+				t.Fatalf("baseline replacement bypassed gate: %v", err)
+			}
+		})
+	}
+}
+
 func TestBaselineCheckRejectsForgedMeasurement(t *testing.T) {
 	for _, tool := range []string{"bash", "bats", "shellcheck", "kcov"} {
 		if _, err := exec.LookPath(tool); err != nil {
