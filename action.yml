@@ -70,19 +70,18 @@ runs:
         RUNNER_ARCH_VALUE: ${{ runner.arch }}
       run: |
         case "$RUNNER_ARCH_VALUE" in
-          X64) arch=amd64 ;;
-          ARM64) arch=arm64 ;;
+          X64) arch=amd64; digest=9af7fc3423ba6d4bd10e299196efae626184838ff63830d14fdf84d1718a8c48 ;;
+          ARM64) arch=arm64; digest=20c1a3f2f5a5661cb9469b23765a5960ad892522ef5048e3f596d4ff7c425bdc ;;
           *) echo 'Unsupported runner architecture' >&2; exit 1 ;;
         esac
         directory=$(mktemp -d "$RUNNER_TEMP/quality-bash.XXXXXXXX")
         echo "artifact=${directory##*/}" >> "$GITHUB_OUTPUT"
+        echo "cache=$directory/cache" >> "$GITHUB_OUTPUT"
         release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1
         asset="quality-bash-v1.0.0-alpha.1-linux-$arch.tar.gz"
         curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$release/$asset" -o "$directory/$asset"
-        curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$release/SHA256SUMS" -o "$directory/SHA256SUMS"
         cd "$directory"
-        awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS > selected.sha256
-        test "$(wc -l < selected.sha256)" -eq 1
+        printf '%s  %s\n' "$digest" "$asset" > selected.sha256
         sha256sum --check selected.sha256
         tar -xzf "$asset"
         echo "path=$directory/quality-bash" >> "$GITHUB_OUTPUT"
@@ -90,12 +89,14 @@ runs:
       shell: bash
       env:
         QB_BINARY: ${{ steps.binary.outputs.path }}
+        XDG_CACHE_HOME: ${{ steps.binary.outputs.cache }}
       run: '"$QB_BINARY" tools install'
     - name: Run quality checks
       id: check
       shell: bash
       env:
         QB_BINARY: ${{ steps.binary.outputs.path }}
+        XDG_CACHE_HOME: ${{ steps.binary.outputs.cache }}
         QB_COMMAND: ${{ inputs.command }}
         QB_ROOT: ${{ inputs.root }}
         QB_SCRIPTS: ${{ inputs.scripts }}
@@ -122,7 +123,7 @@ runs:
         "$QB_BINARY" "${args[@]}"
     - name: Preserve diagnostics
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ steps.binary.outputs.artifact || format('quality-bash-{0}-{1}-{2}', github.job, runner.arch, github.run_attempt) }}
         path: ${{ steps.reports.outputs.path }}

@@ -156,7 +156,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 				returnErr = publishErr
 			}
 		}()
-		if command == "qa" {
+		if command == "qa" || command == "baseline check" {
 			measurement, err = runner.Measure(ctx, selection, *jobs, baselinePath)
 		} else {
 			measurement, err = runner.LoadFresh(ctx, selection, *jobs, baselinePath)

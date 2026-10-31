@@ -43,11 +43,13 @@ After release publication, connect the Action as follows. Checkout history is ne
 
 The default project has matching `example.sh` and `example.bats` files plus `quality-baseline.json`. Multiple pairs are supported. Unmatched Bats files require explicit selection. Repeat `--script` and `--test` for explicit paths; all selected tests apply to each mutant. Paths are relative to `--root`. Use `--reports`, `--baseline`, `--jobs` and `--timeout` to control execution. Reports may be outside the project.
 
+Each Action invocation installs tools into its own fresh cache under the runner's temporary directory. It does not reuse the OS user's persistent tool cache across jobs. Local CLI caches belong to the current user; do not share an OS account or runner between mutually untrusted workloads. Third-party Actions are pinned to full commit SHAs, with monthly Dependabot proposals for review.
+
 ## Baseline lifecycle
 
 Run `qa` to produce fresh measurements. If the baseline is absent, the command fails after measurement; create it explicitly with `baseline update --create`, using the same root, reports, jobs and timeout arguments. Then run `qa` again. `qa` never modifies the baseline.
 
-`baseline check` and `baseline update` require a qualified report matching current sources, tests, helper files and settings. Updates cannot lower either ratio. Ratios use exact integer comparison, without percentage rounding. Use `--base-revision <commit>` to enforce the target revision's baseline as well as the working copy.
+`baseline check` runs fresh checks and compares their in-memory results with the baseline, just like `qa`; it never trusts a saved measurement as evidence that tests passed. `baseline update` requires a qualified report matching current sources, tests, helper files and settings and is a local maintenance operation, not a CI gate. Updates cannot lower either ratio. Ratios use exact integer comparison, without percentage rounding. Use `--base-revision <commit>` to enforce the target revision's baseline as well as the working copy.
 
 Changes to scope or methodology require `baseline update --migrate 'explanation'`. Migration writes the previous and replacement baselines to `quality-baseline.json.migration.json`. Compatible baselines cannot use migration to lower thresholds. Target-revision checks continue to reject incompatible methodology until the migration is accepted in the target branch.
 

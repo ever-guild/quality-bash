@@ -67,6 +67,21 @@ func (r Runner) Mutate(ctx context.Context, s Selection, jobs int) (MutationRepo
 	if err := r.Test(ctx, s); err != nil {
 		return report, fmt.Errorf("original tests failed: %w", err)
 	}
+	// Verify the exact copied layout before attributing failures to mutations.
+	// Excluded reports or Git metadata must not supply required test helpers.
+	control, err := os.MkdirTemp("", "quality-bash-control-")
+	if err != nil {
+		return report, err
+	}
+	defer os.RemoveAll(control)
+	if err := copyProject(r.Root, control, r.Reports); err != nil {
+		return report, err
+	}
+	controlRunner := workerRunner
+	controlRunner.Root = control
+	if err := controlRunner.Test(ctx, s); err != nil {
+		return report, fmt.Errorf("unmodified tests fail in the mutation copy; qualification blocked: %w", err)
+	}
 	for _, file := range s.Scripts {
 		data, err := os.ReadFile(filepath.Join(r.Root, file))
 		if err != nil {

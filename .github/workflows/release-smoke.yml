@@ -11,7 +11,7 @@ jobs:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - name: Run published Action
@@ -38,16 +38,16 @@ jobs:
           RUNNER_ARCH_VALUE: ${{ runner.arch }}
         run: |
           case "$RUNNER_ARCH_VALUE" in
-            X64) arch=amd64 ;;
-            ARM64) arch=arm64 ;;
+            X64) arch=amd64; digest=9af7fc3423ba6d4bd10e299196efae626184838ff63830d14fdf84d1718a8c48 ;;
+            ARM64) arch=arm64; digest=20c1a3f2f5a5661cb9469b23765a5960ad892522ef5048e3f596d4ff7c425bdc ;;
             *) exit 1 ;;
           esac
           directory=$(mktemp -d "$RUNNER_TEMP/quality-bash-local.XXXXXXXX")
+          export XDG_CACHE_HOME="$directory/cache"
           release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1
           asset="quality-bash-v1.0.0-alpha.1-linux-$arch.tar.gz"
           curl --fail --silent --show-error --location "$release/$asset" -o "$directory/$asset"
-          curl --fail --silent --show-error --location "$release/SHA256SUMS" -o "$directory/SHA256SUMS"
-          (cd "$directory"; awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS > selected.sha256; test "$(wc -l < selected.sha256)" -eq 1; sha256sum --check selected.sha256; tar -xzf "$asset")
+          (cd "$directory"; printf '%s  %s\n' "$digest" "$asset" > selected.sha256; sha256sum --check selected.sha256; tar -xzf "$asset")
           "$directory/quality-bash" version
           "$directory/quality-bash" tools install
           "$directory/quality-bash" qa --root testdata/basic --jobs 2
