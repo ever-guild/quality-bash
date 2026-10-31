@@ -1,0 +1,4 @@
+/dist/
+/quality-bash
+quality-reports/
+*.lock

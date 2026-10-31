@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "files": [
+    "example.sh"
+  ],
+  "method": {
+    "coverage": "kcov-ps4-cobertura-lines-v1",
+    "tools": {
+      "bash": "5.2.21(1)-release",
+      "bats": "1.10.0",
+      "kcov": "43+dfsg-1",
+      "shellcheck": "0.9.0"
+    },
+    "mutation": "bash-ast-v1",
+    "operators": [
+      "condition",
+      "arithmetic",
+      "return-code"
+    ],
+    "parameters": {
+      "jobs": "2",
+      "parser": "mvdan.cc/sh/v3@v3.12.0",
+      "timeout": "5m0s"
+    }
+  },
+  "coverage": {
+    "numerator": 3,
+    "denominator": 5
+  },
+  "mutation": {
+    "numerator": 2,
+    "denominator": 3
+  }
+}
