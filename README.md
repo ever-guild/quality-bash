@@ -32,6 +32,16 @@ Coverage uses kcov's PS4 Bash tracing and Cobertura line data. Only selected scr
 
 The initial AST mutation set changes `[[ ... ]]` comparisons and boolean operators, selected binary arithmetic operators, and literal `exit` or `return` codes 0 and 1. It does not mutate comments, arbitrary strings, URLs or embedded awk/jq source. IDs depend on method, file, byte offset, operator and replacement. Every mutant runs in a temporary project copy after the original tests pass. A complete Bats TAP result is required. Invalid syntax is recorded separately; timeouts and infrastructure errors block qualification and never count as detected mutants.
 
+The `bash-ast-v1` operators are fixed:
+
+| AST context | Replacements |
+|---|---|
+| Binary `[[ ... ]]` tests | `==` ↔ `!=`, `-eq` ↔ `-ne`, `-lt` ↔ `-ge`, `-gt` ↔ `-le`, `&&` ↔ `\|\|` |
+| Binary arithmetic | `+` ↔ `-`, `*` → `+`, `<` ↔ `>=`, `>` ↔ `<=`, `==` ↔ `!=` |
+| Literal `exit` and `return` arguments | `0` ↔ `1` |
+
+There are no operators for single-bracket external `test` commands, regex bodies, unary arithmetic or arbitrary numeric literals. Each replacement affects one AST operator or argument. The mutation ratio is detected / (detected + survived); invalid mutants are listed but excluded from that denominator. Zero valid mutants is an error. Any timeout or infrastructure failure invalidates the entire measurement, regardless of the ratio.
+
 ## Execution limitations
 
 Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Terminal, subprocess and command-substitution fixtures are tested, but tracing can expose extra collector diagnostics; general output equivalence is still under investigation.
