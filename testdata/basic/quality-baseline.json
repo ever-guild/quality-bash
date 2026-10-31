@@ -8,7 +8,7 @@
     "tools": {
       "bash": "5.2.21(1)-release",
       "bats": "1.10.0",
-      "kcov": "43+dfsg-1",
+      "kcov": "43",
       "shellcheck": "0.9.0"
     },
     "mutation": "bash-ast-v1",

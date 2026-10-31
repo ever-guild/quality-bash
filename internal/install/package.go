@@ -2,11 +2,14 @@ package install
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 type Package struct {
@@ -38,6 +41,12 @@ func (p Package) Validate() error {
 	return nil
 }
 func InstallPackage(ctx context.Context, cache string, p Package) (string, error) {
+	return installPackage(ctx, cache, p, "")
+}
+func InstallLocalPackage(ctx context.Context, cache string, p Package, archive string) (string, error) {
+	return installPackage(ctx, cache, p, archive)
+}
+func installPackage(ctx context.Context, cache string, p Package, localArchive string) (string, error) {
 	if err := p.Validate(); err != nil {
 		return "", err
 	}
@@ -60,8 +69,32 @@ func InstallPackage(ctx context.Context, cache string, p Package) (string, error
 	}
 	defer os.RemoveAll(staging)
 	archivePath := filepath.Join(staging, "package.tar.gz")
-	if err = Download(ctx, p.URL, p.SHA256, archivePath); err != nil {
-		return "", err
+	if localArchive == "" {
+		if err = Download(ctx, p.URL, p.SHA256, archivePath); err != nil {
+			return "", err
+		}
+	} else {
+		input, openErr := os.Open(localArchive)
+		if openErr != nil {
+			return "", openErr
+		}
+		defer input.Close()
+		output, createErr := os.Create(archivePath)
+		if createErr != nil {
+			return "", createErr
+		}
+		hash := sha256.New()
+		n, copyErr := io.Copy(io.MultiWriter(output, hash), io.LimitReader(input, maxArchive+1))
+		closeErr := output.Close()
+		if copyErr != nil {
+			return "", copyErr
+		}
+		if closeErr != nil {
+			return "", closeErr
+		}
+		if n > maxArchive || !strings.EqualFold(fmt.Sprintf("%x", hash.Sum(nil)), p.SHA256) {
+			return "", fmt.Errorf("local archive size or SHA-256 mismatch")
+		}
 	}
 	content := filepath.Join(staging, "content")
 	if err = os.Mkdir(content, 0700); err != nil {

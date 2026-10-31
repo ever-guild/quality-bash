@@ -1,6 +1,6 @@
 {
-  "reason": "Record full Bash and kcov build versions instead of truncated numeric versions",
-  "at": "2026-10-31T20:05:54.90043255Z",
+  "reason": "Use upstream kcov 43 and pinned portable release tool packages instead of distribution kcov 43+dfsg-1",
+  "at": "2026-10-31T20:18:58.929301991Z",
   "previous": {
     "schema": 1,
     "files": [
@@ -9,9 +9,9 @@
     "method": {
       "coverage": "kcov-ps4-cobertura-lines-v1",
       "tools": {
-        "bash": "5.2.21",
+        "bash": "5.2.21(1)-release",
         "bats": "1.10.0",
-        "kcov": "43",
+        "kcov": "43+dfsg-1",
         "shellcheck": "0.9.0"
       },
       "mutation": "bash-ast-v1",
@@ -45,7 +45,7 @@
       "tools": {
         "bash": "5.2.21(1)-release",
         "bats": "1.10.0",
-        "kcov": "43+dfsg-1",
+        "kcov": "43",
         "shellcheck": "0.9.0"
       },
       "mutation": "bash-ast-v1",

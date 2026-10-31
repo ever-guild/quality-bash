@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "packages": [
+    {
+      "name": "bash",
+      "version": "5.2.21",
+      "os": "linux",
+      "arch": "amd64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/bash-linux-amd64.tar.gz",
+      "sha256": "0dc7392a9822e67f432dc99530ae61affda38df297bd675bdc4ff9968a002b40",
+      "executables": [
+        "bin/bash"
+      ]
+    },
+    {
+      "name": "bats",
+      "version": "1.10.0",
+      "os": "linux",
+      "arch": "amd64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/bats-linux-amd64.tar.gz",
+      "sha256": "e745987e5f9cc97d54e1da9e9f59c18e5adc71eadcf5ece93fea703a838e7e85",
+      "executables": [
+        "bin/bats"
+      ]
+    },
+    {
+      "name": "shellcheck",
+      "version": "0.9.0",
+      "os": "linux",
+      "arch": "amd64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/shellcheck-linux-amd64.tar.gz",
+      "sha256": "d563901e3f44c33af4b3c2a6a1dcdd37c51eaff7e1b516fa402d1fafd2a0f548",
+      "executables": [
+        "bin/shellcheck"
+      ]
+    },
+    {
+      "name": "kcov",
+      "version": "43",
+      "os": "linux",
+      "arch": "amd64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/kcov-linux-amd64.tar.gz",
+      "sha256": "6060f03c46017725c051cd5fa653647b437d186a1740bdb14648e0cced884709",
+      "executables": [
+        "bin/kcov"
+      ]
+    },
+    {
+      "name": "bash",
+      "version": "5.2.21",
+      "os": "linux",
+      "arch": "arm64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/bash-linux-arm64.tar.gz",
+      "sha256": "0cefc48fa0ff1c479257ca2210c5f52059d63b037ff61402e3db768d67a98551",
+      "executables": [
+        "bin/bash"
+      ]
+    },
+    {
+      "name": "bats",
+      "version": "1.10.0",
+      "os": "linux",
+      "arch": "arm64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/bats-linux-arm64.tar.gz",
+      "sha256": "1d56b391fe6d0b5b2f54b153fe62d371ca06bead81b28210f75c43a1e0a84c03",
+      "executables": [
+        "bin/bats"
+      ]
+    },
+    {
+      "name": "shellcheck",
+      "version": "0.9.0",
+      "os": "linux",
+      "arch": "arm64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/shellcheck-linux-arm64.tar.gz",
+      "sha256": "1efa6ed4646de2214043a13dbfd07bb93fd30610ef15083f1f0f25b3df65f7ee",
+      "executables": [
+        "bin/shellcheck"
+      ]
+    },
+    {
+      "name": "kcov",
+      "version": "43",
+      "os": "linux",
+      "arch": "arm64",
+      "url": "https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1/kcov-linux-arm64.tar.gz",
+      "sha256": "dbf41fccb5b9049d36006d712bbbe420612e5db15a278d9917f35a06468e40db",
+      "executables": [
+        "bin/kcov"
+      ]
+    }
+  ]
+}

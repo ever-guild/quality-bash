@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const version = "v1.0.0-alpha.1-dev"
+var version = "v1.0.0-alpha.1-dev"
 
 type paths []string
 
@@ -64,6 +64,12 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("unexpected positional arguments")
+	}
+	if *timeout <= 0 {
+		return fmt.Errorf("timeout must be positive")
+	}
+	if *jobs < 1 {
+		return fmt.Errorf("jobs must be positive")
 	}
 	if command == "tools install" || *toolsManifest != "" || len(install.BundledManifest) != 0 {
 		data := install.BundledManifest

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ever-guild/quality-bash/internal/install"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,9 @@ import (
 )
 
 func TestCLIRejectsOverlappingOutputBeforeExecution(t *testing.T) {
+	previous := install.BundledManifest
+	install.BundledManifest = nil
+	t.Cleanup(func() { install.BundledManifest = previous })
 	root := t.TempDir()
 	for _, name := range []string{"a.sh", "a.bats"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("# fixture\n"), 0600); err != nil {

@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
+	"github.com/ever-guild/quality-bash/internal/install"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,7 +25,16 @@ func main() {
 }
 func run() error {
 	output := flag.String("output", "dist", "artifact directory")
+	version := flag.String("version", "dev", "dev or v1.0.0-alpha.1")
 	flag.Parse()
+	if *version != "dev" && *version != "v1.0.0-alpha.1" {
+		return fmt.Errorf("unsupported release version")
+	}
+	if *version != "dev" {
+		if _, err := install.ParseManifest(install.BundledManifest); err != nil {
+			return fmt.Errorf("release requires a complete tool manifest: %w", err)
+		}
+	}
 	if err := os.MkdirAll(*output, 0755); err != nil {
 		return err
 	}
@@ -40,7 +50,11 @@ func run() error {
 	var checksums bytes.Buffer
 	for _, arch := range []string{"amd64", "arm64"} {
 		binary := filepath.Join(temp, "quality-bash-"+arch)
-		cmd := exec.Command("go", "build", "-buildvcs=false", "-trimpath", "-ldflags=-s -w", "-o", binary, "./cmd/quality-bash")
+		buildVersion := *version
+		if buildVersion == "dev" {
+			buildVersion = "v1.0.0-alpha.1-dev"
+		}
+		cmd := exec.Command("go", "build", "-buildvcs=false", "-trimpath", "-ldflags=-s -w -X main.version="+buildVersion, "-o", binary, "./cmd/quality-bash")
 		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH="+arch, "CGO_ENABLED=0")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -52,11 +66,15 @@ func run() error {
 			return err
 		}
 		files := map[string][]byte{"quality-bash": data, "licenses/mvdan-sh.txt": license, "BUILD-STATUS.txt": []byte("Development build. Not a qualified v1.0.0-alpha.1 release.\n")}
+		if *version != "dev" {
+			files["BUILD-STATUS.txt"] = []byte("Version: " + *version + "\n")
+			files["tools-manifest.json"] = install.BundledManifest
+		}
 		archive, err := pack(files)
 		if err != nil {
 			return err
 		}
-		name := "quality-bash-dev-linux-" + arch + ".tar.gz"
+		name := "quality-bash-" + *version + "-linux-" + arch + ".tar.gz"
 		if err = os.WriteFile(filepath.Join(*output, name), archive, 0644); err != nil {
 			return err
 		}

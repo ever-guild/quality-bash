@@ -4,7 +4,7 @@ Go CLI for Bash linting, Bats tests, line coverage, mutation testing and quality
 
 ## Local development
 
-Go 1.27 or newer is required to build. Released binaries will not require Go. Install Bash, Bats, ShellCheck and kcov explicitly; ordinary checks never install dependencies. The automatic tool installer is still being completed.
+Go 1.27 or newer is required to build. Prebuilt binaries do not require Go. Run `quality-bash tools install` explicitly to install the pinned Bash, Bats, ShellCheck and kcov packages into the user cache without sudo. Ordinary checks only use the installed packages and never download or update dependencies. Downloads require the published release assets; until publication, maintainers can validate the same archives with `cmd/install-local-tools`.
 
 ```console
 go build -buildvcs=false -o quality-bash ./cmd/quality-bash
@@ -14,6 +14,15 @@ go build -buildvcs=false -o quality-bash ./cmd/quality-bash
 ./quality-bash coverage --root testdata/basic
 ./quality-bash mutation --root testdata/basic --jobs 2
 ./quality-bash qa --root testdata/basic --jobs 2
+```
+
+After release publication, connect the Action as follows. Checkout history is needed for target-revision baseline comparisons; pull requests use their base commit by default.
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+- uses: ever-guild/quality-bash@v1.0.0-alpha.1
 ```
 
 The default project has matching `example.sh` and `example.bats` files plus `quality-baseline.json`. Multiple pairs are supported. Unmatched Bats files require explicit selection. Repeat `--script` and `--test` for explicit paths; all selected tests apply to each mutant. Paths are relative to `--root`. Use `--reports`, `--baseline`, `--jobs` and `--timeout` to control execution. Reports may be outside the project.
@@ -46,7 +55,7 @@ There are no operators for single-bracket external `test` commands, regex bodies
 
 Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Terminal, subprocess and command-substitution fixtures are tested, but tracing can expose extra collector diagnostics; general output equivalence is still under investigation.
 
-The fixture baseline is tied to its recorded tool versions and settings. A different toolchain requires an explicit methodology migration. arm64 binaries cross-compile, but full arm64 qualification and published Action smoke tests remain outstanding.
+The fixture baseline is tied to its recorded tool versions and settings. A different toolchain requires an explicit methodology migration. Native amd64 and arm64 CI has passed the integration suite and extracted tool bundle checks. Published Action smoke tests remain outstanding.
 
 ## Tests and packaging
 
