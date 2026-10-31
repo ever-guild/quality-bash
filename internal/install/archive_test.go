@@ -46,3 +46,29 @@ func TestExtract(t *testing.T) {
 		t.Fatal("symlink accepted")
 	}
 }
+
+func TestExtractGlobalPAXMetadata(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	if err := tw.WriteHeader(&tar.Header{Name: "pax_global_header", Typeflag: tar.TypeXGlobalHeader, PAXRecords: map[string]string{"comment": "upstream commit"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tw.WriteHeader(&tar.Header{Name: "source/file", Typeflag: tar.TypeReg, Mode: 0644, Size: 2}); err != nil {
+		t.Fatal(err)
+	}
+	tw.Write([]byte("ok"))
+	tw.Close()
+	gz.Close()
+	root := t.TempDir()
+	if err := ExtractTarGzip(bytes.NewReader(buf.Bytes()), root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "pax_global_header")); !os.IsNotExist(err) {
+		t.Fatal("metadata written as file")
+	}
+	data, err := os.ReadFile(filepath.Join(root, "source/file"))
+	if err != nil || string(data) != "ok" {
+		t.Fatal(err)
+	}
+}

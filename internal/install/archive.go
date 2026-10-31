@@ -107,6 +107,9 @@ func ExtractTarGzip(reader io.Reader, destination string) error {
 		}
 		path := filepath.Join(destination, name)
 		switch header.Typeflag {
+		case tar.TypeXGlobalHeader:
+			// Global PAX records carry archive metadata, not filesystem entries.
+			continue
 		case tar.TypeDir:
 			if err = os.MkdirAll(path, 0755); err != nil {
 				return err
