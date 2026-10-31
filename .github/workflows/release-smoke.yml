@@ -38,8 +38,8 @@ jobs:
           RUNNER_ARCH_VALUE: ${{ runner.arch }}
         run: |
           case "$RUNNER_ARCH_VALUE" in
-            X64) arch=amd64; digest=d946400dbff4e09a177c2c8b34834cb649238eaace4d5529dee14049b80623b0 ;;
-            ARM64) arch=arm64; digest=474866f2e77675ea84da5cc33f545f332e19a7cdc1582f014d9b6a4680bbd37c ;;
+            X64) arch=amd64; digest=71e1b7527fd16b05ea65b550f007e1b02f3442732dfb228d475b35e90ac2a250 ;;
+            ARM64) arch=arm64; digest=0bdd92b3fc6005ba8f2112e2ef6bcc59c27dadb961362ba27096dc6d85c40dca ;;
             *) exit 1 ;;
           esac
           directory=$(mktemp -d "$RUNNER_TEMP/quality-bash-local.XXXXXXXX")

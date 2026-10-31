@@ -71,6 +71,12 @@ There are no operators for single-bracket external `test` commands, regex bodies
 
 ## Execution limitations
 
+### Trusted project code
+
+Only run scripts, Bats tests and helpers that you trust. The quality gate measures this trusted code and detects quality regressions; it does not protect measurement integrity against code deliberately trying to falsify results. A malicious test running as the same user can replace tools, temporarily rewrite source, or fabricate reports. Fingerprints, checksum verification and temporary copies do not prevent such same-user attacks, and mandatory test sandboxing is outside this release's scope.
+
+Fork PR support means the Action requires no secrets or write permissions. It does not make arbitrary fork code safe to execute: review code before execution and apply your runner's isolation and trust policy. Keep mutually untrusted workloads on separate runners or OS accounts.
+
 Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Integration tests assert exact script stdout, stderr, exit status and pseudo-terminal output both with and without coverage. Collector diagnostics are retained separately in the command logs.
 
 The fixture baseline is tied to its recorded tool versions and settings. A different toolchain requires an explicit methodology migration. Native amd64 and arm64 CI has passed the integration suite and extracted tool bundle checks. Published Action smoke tests remain outstanding.
