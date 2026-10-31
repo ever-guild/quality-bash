@@ -28,6 +28,12 @@ jobs:
         run: go run ./cmd/build-kcov --prefix "$RUNNER_TEMP/kcov"
       - name: Run all integration tests
         run: PATH="$RUNNER_TEMP/kcov/bin:$PATH" go test -race -count=1 -v ./...
+      - name: Package external tools
+        run: go run ./cmd/bundle-tools --kcov "$RUNNER_TEMP/kcov/bin/kcov" --output tool-dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tools-${{ runner.arch }}
+          path: tool-dist/
       - name: Vet
         run: go vet ./...
       - name: Build CLI
