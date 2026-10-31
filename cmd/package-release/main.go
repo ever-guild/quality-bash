@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ever-guild/quality-bash/internal/install"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +28,7 @@ func main() {
 func run() error {
 	output := flag.String("output", "dist", "artifact directory")
 	version := flag.String("version", "dev", "dev or v1.0.0-alpha.1")
+	toolsDirectory := flag.String("tools", "", "optional directory containing the eight pinned tool archives")
 	flag.Parse()
 	if *version != "dev" && *version != "v1.0.0-alpha.1" {
 		return fmt.Errorf("unsupported release version")
@@ -91,7 +93,49 @@ func run() error {
 		}
 		fmt.Fprintf(&checksums, "%x  %s\n", sha256.Sum256(archive), name)
 	}
+	if *toolsDirectory != "" {
+		manifest, err := install.ParseManifest(install.BundledManifest)
+		if err != nil {
+			return err
+		}
+		for _, pkg := range manifest.Packages {
+			name := pkg.Name + "-" + pkg.OS + "-" + pkg.Arch + ".tar.gz"
+			if err := copyVerifiedArchive(filepath.Join(*toolsDirectory, name), filepath.Join(*output, name), pkg.SHA256); err != nil {
+				return err
+			}
+			fmt.Fprintf(&checksums, "%s  %s\n", pkg.SHA256, name)
+		}
+	}
 	return os.WriteFile(filepath.Join(*output, "SHA256SUMS"), checksums.Bytes(), 0644)
+}
+
+func copyVerifiedArchive(source, destination, expected string) error {
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+	output, err := os.CreateTemp(filepath.Dir(destination), ".archive-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(output.Name())
+	hash := sha256.New()
+	_, copyErr := io.Copy(io.MultiWriter(output, hash), input)
+	closeErr := output.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	if fmt.Sprintf("%x", hash.Sum(nil)) != expected {
+		return fmt.Errorf("tool archive checksum mismatch: %s", source)
+	}
+	if err := os.Chmod(output.Name(), 0644); err != nil {
+		return err
+	}
+	return os.Rename(output.Name(), destination)
 }
 func pack(files map[string][]byte) ([]byte, error) {
 	var buffer bytes.Buffer

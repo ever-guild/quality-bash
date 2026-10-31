@@ -1,6 +1,21 @@
 # quality-bash
 
-Go CLI for Bash linting, Bats tests, line coverage, mutation testing and quality regression gates. This repository is under development; v1.0.0-alpha.1 has not been released. The Action currently references the planned release and is not ready for consumption.
+Go CLI for Bash linting, Bats tests, line coverage, mutation testing and quality regression gates.
+
+## Release installation
+
+The `v1.0.0-alpha.1` release targets Linux amd64 and arm64. Download the matching `quality-bash-v1.0.0-alpha.1-linux-<architecture>.tar.gz` and `SHA256SUMS` from the [release page](https://github.com/ever-guild/quality-bash/releases/tag/v1.0.0-alpha.1). The commands below use amd64; substitute arm64 where appropriate. They become available when the release assets are published.
+
+```console
+sha256sum --ignore-missing --check SHA256SUMS
+tar -xzf quality-bash-v1.0.0-alpha.1-linux-amd64.tar.gz
+./quality-bash version
+./quality-bash tools install
+./quality-bash doctor
+./quality-bash qa --root /path/to/project
+```
+
+Confirm that checksum verification reports `OK` for the chosen archive before extracting it. Go and sudo are not required. Keep the binary in a directory on your PATH, or invoke its absolute path. Tool downloads need HTTPS access to GitHub; subsequent checks use the user cache without network installation. Bundled native tools are qualified on Ubuntu 24.04 for both architectures. Other Linux distributions are not yet qualified.
 
 ## Local development
 
@@ -67,3 +82,5 @@ go run -buildvcs=false ./cmd/package-release
 ```
 
 Integration tests skip when their external tools are absent. To qualify a release, all tools must be present and those tests must execute. The packager emits development archives in `dist` by default. Use `go run ./cmd/package-release --version v1.0.0-alpha.1` to build release candidates for Linux amd64 and arm64. Archives include checksums, this usage documentation, and the Go runtime and Bash parser licenses. Release candidates also include the pinned tool manifest. Packaging does not publish or qualify a release; native tests and the published release smoke workflow are separate gates.
+
+To assemble the complete asset set, pass `--tools /path/to/tool-archives`. That directory must contain all eight archives produced by native CI. The packager verifies each against the embedded manifest, copies it into the output directory and includes it in the combined `SHA256SUMS`. Each tool archive carries its dependency license notices; the kcov archive also includes the pinned upstream source archive.
