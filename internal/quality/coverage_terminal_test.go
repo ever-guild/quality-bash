@@ -35,9 +35,7 @@ exit 7
 @test "pseudo terminal remains a terminal" {
  run script -q -e -c "bash '$BATS_TEST_DIRNAME/example.sh'" /dev/null
  [ "$status" -eq 7 ]
- [[ "$output" == *terminal* ]]
- [[ "$output" == *error* ]]
- [[ "$output" != *pipe* ]]
+ [ "$output" = $'terminal\r\nerror\r' ]
 }
 `
 	for name, data := range map[string]string{"example.sh": source, "example.bats": tests} {

@@ -8,6 +8,7 @@ Go 1.27 or newer is required to build. Prebuilt binaries do not require Go. Run 
 
 ```console
 go build -buildvcs=false -o quality-bash ./cmd/quality-bash
+./quality-bash tools install
 ./quality-bash doctor
 ./quality-bash lint --root testdata/basic
 ./quality-bash test --root testdata/basic
@@ -53,7 +54,7 @@ There are no operators for single-bracket external `test` commands, regex bodies
 
 ## Execution limitations
 
-Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Terminal, subprocess and command-substitution fixtures are tested, but tracing can expose extra collector diagnostics; general output equivalence is still under investigation.
+Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Integration tests assert exact script stdout, stderr, exit status and pseudo-terminal output both with and without coverage. Collector diagnostics are retained separately in the command logs.
 
 The fixture baseline is tied to its recorded tool versions and settings. A different toolchain requires an explicit methodology migration. Native amd64 and arm64 CI has passed the integration suite and extracted tool bundle checks. Published Action smoke tests remain outstanding.
 
@@ -65,4 +66,4 @@ go vet ./...
 go run -buildvcs=false ./cmd/package-release
 ```
 
-Integration tests skip when their external tools are absent. To qualify a release, all tools must be present and those tests must execute. The packager currently emits development archives in `dist`, with checksums and the Bash parser's BSD license. It does not publish a release.
+Integration tests skip when their external tools are absent. To qualify a release, all tools must be present and those tests must execute. The packager emits development archives in `dist` by default. Use `go run ./cmd/package-release --version v1.0.0-alpha.1` to build release candidates for Linux amd64 and arm64. Archives include checksums, this usage documentation, and the Go runtime and Bash parser licenses. Release candidates also include the pinned tool manifest. Packaging does not publish or qualify a release; native tests and the published release smoke workflow are separate gates.
