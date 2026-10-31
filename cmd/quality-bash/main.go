@@ -129,6 +129,9 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	if !filepath.IsAbs(baselinePath) {
 		baselinePath = filepath.Join(absRoot, baselinePath)
 	}
+	if err = quality.ValidateOutputPaths(absRoot, reportPath, baselinePath, selection); err != nil {
+		return err
+	}
 	if command == "coverage" {
 		report, err := runner.Coverage(ctx, selection)
 		if err == nil {

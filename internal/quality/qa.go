@@ -31,6 +31,9 @@ func (r Runner) Settings(ctx context.Context, s Selection, jobs int) (Settings, 
 }
 func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath string) (Measurement, error) {
 	var m Measurement
+	if err := ValidateOutputPaths(r.Root, r.Reports, baselinePath, s); err != nil {
+		return m, err
+	}
 	settings, err := r.Settings(ctx, s, jobs)
 	if err != nil {
 		return m, err
@@ -69,6 +72,9 @@ func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath
 }
 func (r Runner) LoadFresh(ctx context.Context, s Selection, jobs int, baselinePath string) (Measurement, error) {
 	var m Measurement
+	if err := ValidateOutputPaths(r.Root, r.Reports, baselinePath, s); err != nil {
+		return m, err
+	}
 	if err := ReadJSON(filepath.Join(r.Reports, "measurement.json"), &m); err != nil {
 		return m, err
 	}

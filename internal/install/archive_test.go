@@ -72,3 +72,32 @@ func TestExtractGlobalPAXMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSourceExtractionOmitsOnlyRequestedDirectory(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for _, header := range []*tar.Header{
+		{Name: "upstream/tests/link", Typeflag: tar.TypeSymlink, Linkname: "fixture"},
+		{Name: "upstream/src/main", Typeflag: tar.TypeReg, Mode: 0644, Size: 2},
+	} {
+		if err := tw.WriteHeader(header); err != nil {
+			t.Fatal(err)
+		}
+		if header.Typeflag == tar.TypeReg {
+			tw.Write([]byte("ok"))
+		}
+	}
+	tw.Close()
+	gz.Close()
+	root := t.TempDir()
+	if err := ExtractSourceTarGzip(bytes.NewReader(buf.Bytes()), root, "upstream/tests"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "upstream/src/main")); err != nil {
+		t.Fatal(err)
+	}
+	if err := ExtractTarGzip(bytes.NewReader(buf.Bytes()), t.TempDir()); err == nil {
+		t.Fatal("runtime archive accepted symlink")
+	}
+}
