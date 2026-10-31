@@ -75,6 +75,7 @@ runs:
           *) echo 'Unsupported runner architecture' >&2; exit 1 ;;
         esac
         directory=$(mktemp -d "$RUNNER_TEMP/quality-bash.XXXXXXXX")
+        echo "artifact=${directory##*/}" >> "$GITHUB_OUTPUT"
         release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1
         asset="quality-bash-v1.0.0-alpha.1-linux-$arch.tar.gz"
         curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$release/$asset" -o "$directory/$asset"
@@ -123,6 +124,6 @@ runs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: quality-bash-${{ github.job }}-${{ github.run_attempt }}
+        name: ${{ steps.binary.outputs.artifact || format('quality-bash-{0}-{1}-{2}', github.job, runner.arch, github.run_attempt) }}
         path: ${{ steps.reports.outputs.path }}
         if-no-files-found: ignore
