@@ -54,7 +54,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	readme, err := os.ReadFile("README.md")
+	readme, err := os.ReadFile("reamde.md")
+	if err != nil {
+		return err
+	}
+	contributing, err := os.ReadFile("contributing.md")
 	if err != nil {
 		return err
 	}
@@ -78,7 +82,8 @@ func run() error {
 		}
 		files := map[string][]byte{"quality-bash": data, "licenses/mvdan-sh.txt": license, "BUILD-STATUS.txt": []byte("Development build. Not a qualified v1.0.0-alpha.1 release.\n")}
 		files["licenses/go.txt"] = goLicense
-		files["README.md"] = readme
+		files["reamde.md"] = readme
+		files["contributing.md"] = contributing
 		if *version != "dev" {
 			files["BUILD-STATUS.txt"] = []byte("Version: " + *version + "\n")
 			files["tools-manifest.json"] = install.BundledManifest

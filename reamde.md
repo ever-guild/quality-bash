@@ -17,20 +17,21 @@ tar -xzf quality-bash-v1.0.0-alpha.1-linux-amd64.tar.gz
 
 Confirm that checksum verification reports `OK` for the chosen archive before extracting it. Go and sudo are not required. Keep the binary in a directory on your PATH, or invoke its absolute path. Tool downloads need HTTPS access to GitHub; subsequent checks use the user cache without network installation. Bundled native tools are qualified on Ubuntu 24.04 for both architectures. Other Linux distributions are not yet qualified.
 
-## Local development
+## Local usage
 
-Go 1.27 or newer is required to build. Prebuilt binaries do not require Go. Run `quality-bash tools install` explicitly to install the pinned Bash, Bats, ShellCheck and kcov packages into the user cache without sudo. Ordinary checks only use the installed packages and never download or update dependencies. Downloads require the published release assets; until publication, maintainers can validate the same archives with `cmd/install-local-tools`.
+Run `quality-bash tools install` explicitly to install the pinned Bash, Bats, ShellCheck and kcov packages into the user cache without sudo. Ordinary checks only use the installed packages and never download or update dependencies.
 
 ```console
-go build -buildvcs=false -o quality-bash ./cmd/quality-bash
 ./quality-bash tools install
 ./quality-bash doctor
-./quality-bash lint --root testdata/basic
-./quality-bash test --root testdata/basic
-./quality-bash coverage --root testdata/basic
-./quality-bash mutation --root testdata/basic --jobs 2
-./quality-bash qa --root testdata/basic --jobs 2
+./quality-bash lint --root /path/to/project
+./quality-bash test --root /path/to/project
+./quality-bash coverage --root /path/to/project
+./quality-bash mutation --root /path/to/project --jobs 2
+./quality-bash qa --root /path/to/project --jobs 2
 ```
+
+## GitHub Action
 
 After release publication, connect the Action as follows. Checkout history is needed for target-revision baseline comparisons; pull requests use their base commit by default.
 
@@ -43,7 +44,7 @@ After release publication, connect the Action as follows. Checkout history is ne
 
 The default project has matching `example.sh` and `example.bats` files plus `quality-baseline.json`. Multiple pairs are supported. Unmatched Bats files require explicit selection. Repeat `--script` and `--test` for explicit paths; all selected tests apply to each mutant. Paths are relative to `--root`. Use `--reports`, `--baseline`, `--jobs` and `--timeout` to control execution. Reports may be outside the project.
 
-Each Action invocation installs tools into its own fresh cache under the runner's temporary directory. It does not reuse the OS user's persistent tool cache across jobs. Local CLI caches belong to the current user; do not share an OS account or runner between mutually untrusted workloads. Third-party Actions are pinned to full commit SHAs, with monthly Dependabot proposals for review.
+Each Action invocation installs tools into its own fresh cache under the runner's temporary directory. It does not reuse the OS user's persistent tool cache across jobs. Local CLI caches belong to the current user; do not share an OS account or runner between mutually untrusted workloads.
 
 ## Baseline lifecycle
 
@@ -79,16 +80,6 @@ Fork PR support means the Action requires no secrets or write permissions. It do
 
 Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Integration tests assert exact script stdout, stderr, exit status and pseudo-terminal output both with and without coverage. Collector diagnostics are retained separately in the command logs.
 
-The fixture baseline is tied to its recorded tool versions and settings. A different toolchain requires an explicit methodology migration. Native amd64 and arm64 CI has passed the integration suite and extracted tool bundle checks. Published Action smoke tests remain outstanding.
+Baselines are tied to their recorded tool versions and settings. A different toolchain requires an explicit methodology migration.
 
-## Tests and packaging
-
-```console
-go test ./...
-go vet ./...
-go run -buildvcs=false ./cmd/package-release
-```
-
-Integration tests skip when their external tools are absent. To qualify a release, all tools must be present and those tests must execute. The packager emits development archives in `dist` by default. Use `go run ./cmd/package-release --version v1.0.0-alpha.1` to build release candidates for Linux amd64 and arm64. Archives include checksums, this usage documentation, and the Go runtime and Bash parser licenses. Release candidates also include the pinned tool manifest. Packaging does not publish or qualify a release; native tests and the published release smoke workflow are separate gates.
-
-To assemble the complete asset set, pass `--tools /path/to/tool-archives`. That directory must contain all eight archives produced by native CI. The packager verifies each against the embedded manifest, copies it into the output directory and includes it in the combined `SHA256SUMS`. Each tool archive carries its dependency license notices; the kcov archive also includes the pinned upstream source archive.
+For development, testing and release procedures, see [contributing.md](contributing.md).
