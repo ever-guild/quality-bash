@@ -32,3 +32,31 @@ jobs:
           test "$COVERED/$LINES" = '3/5'
           test "$DETECTED/$MUTANTS" = '2/3'
           test "$PASSED" = 'true'
+      - name: Download and run standalone release CLI
+        id: local
+        env:
+          RUNNER_ARCH_VALUE: ${{ runner.arch }}
+        run: |
+          case "$RUNNER_ARCH_VALUE" in
+            X64) arch=amd64 ;;
+            ARM64) arch=arm64 ;;
+            *) exit 1 ;;
+          esac
+          directory=$(mktemp -d "$RUNNER_TEMP/quality-bash-local.XXXXXXXX")
+          release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1
+          asset="quality-bash-v1.0.0-alpha.1-linux-$arch.tar.gz"
+          curl --fail --silent --show-error --location "$release/$asset" -o "$directory/$asset"
+          curl --fail --silent --show-error --location "$release/SHA256SUMS" -o "$directory/SHA256SUMS"
+          (cd "$directory"; awk -v asset="$asset" '$2 == asset { print }' SHA256SUMS > selected.sha256; test "$(wc -l < selected.sha256)" -eq 1; sha256sum --check selected.sha256; tar -xzf "$asset")
+          "$directory/quality-bash" version
+          "$directory/quality-bash" tools install
+          "$directory/quality-bash" qa --root testdata/basic --jobs 2
+      - name: Compare CLI and Action outputs
+        env:
+          ACTION_COVERAGE: ${{ steps.quality.outputs.coverage_numerator }}/${{ steps.quality.outputs.coverage_denominator }}
+          CLI_COVERAGE: ${{ steps.local.outputs.coverage_numerator }}/${{ steps.local.outputs.coverage_denominator }}
+          ACTION_MUTATION: ${{ steps.quality.outputs.mutation_numerator }}/${{ steps.quality.outputs.mutation_denominator }}
+          CLI_MUTATION: ${{ steps.local.outputs.mutation_numerator }}/${{ steps.local.outputs.mutation_denominator }}
+        run: |
+          test "$ACTION_COVERAGE" = "$CLI_COVERAGE"
+          test "$ACTION_MUTATION" = "$CLI_MUTATION"
