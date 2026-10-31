@@ -46,6 +46,10 @@ func run() error {
 		return err
 	}
 	defer os.RemoveAll(temp)
+	projectLicense, err := os.ReadFile("LICENSE")
+	if err != nil {
+		return err
+	}
 	license, err := os.ReadFile("licenses/mvdan-sh.txt")
 	if err != nil {
 		return err
@@ -82,6 +86,7 @@ func run() error {
 		}
 		files := map[string][]byte{"quality-bash": data, "licenses/mvdan-sh.txt": license, "BUILD-STATUS.txt": []byte("Development build. Not a qualified v1.0.0-alpha.1 release.\n")}
 		files["licenses/go.txt"] = goLicense
+		files["LICENSE"] = projectLicense
 		files["reamde.md"] = readme
 		files["contributing.md"] = contributing
 		if *version != "dev" {
