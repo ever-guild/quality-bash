@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"time"
 )
@@ -47,6 +48,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	goLicense, err := os.ReadFile(filepath.Join(runtime.GOROOT(), "LICENSE"))
+	if err != nil {
+		return err
+	}
+	readme, err := os.ReadFile("README.md")
+	if err != nil {
+		return err
+	}
 	var checksums bytes.Buffer
 	for _, arch := range []string{"amd64", "arm64"} {
 		binary := filepath.Join(temp, "quality-bash-"+arch)
@@ -66,6 +75,8 @@ func run() error {
 			return err
 		}
 		files := map[string][]byte{"quality-bash": data, "licenses/mvdan-sh.txt": license, "BUILD-STATUS.txt": []byte("Development build. Not a qualified v1.0.0-alpha.1 release.\n")}
+		files["licenses/go.txt"] = goLicense
+		files["README.md"] = readme
 		if *version != "dev" {
 			files["BUILD-STATUS.txt"] = []byte("Version: " + *version + "\n")
 			files["tools-manifest.json"] = install.BundledManifest
