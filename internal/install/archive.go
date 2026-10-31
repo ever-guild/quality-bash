@@ -72,6 +72,12 @@ func Download(ctx context.Context, url, digest, destination string) error {
 // ExtractTarGzip accepts only regular files and directories. Links, devices,
 // traversal and duplicate files are rejected, including links to other entries.
 func ExtractTarGzip(reader io.Reader, destination string) error {
+	return ExtractSourceTarGzip(reader, destination, "")
+}
+
+// ExtractSourceTarGzip can omit an upstream-only directory during a source
+// build. Runtime package installation always uses ExtractTarGzip instead.
+func ExtractSourceTarGzip(reader io.Reader, destination, omitDirectory string) error {
 	info, err := os.Lstat(destination)
 	if err != nil {
 		return err
@@ -104,6 +110,9 @@ func ExtractTarGzip(reader io.Reader, destination string) error {
 		name := filepath.Clean(header.Name)
 		if filepath.IsAbs(name) || name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) {
 			return fmt.Errorf("unsafe archive path %q", header.Name)
+		}
+		if omitDirectory != "" && (name == omitDirectory || strings.HasPrefix(name, omitDirectory+string(filepath.Separator))) {
+			continue
 		}
 		path := filepath.Join(destination, name)
 		switch header.Typeflag {

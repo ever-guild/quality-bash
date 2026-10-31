@@ -47,7 +47,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	err = install.ExtractTarGzip(file, source)
+	err = install.ExtractSourceTarGzip(file, source, "kcov-43/tests")
 	file.Close()
 	if err != nil {
 		return err
