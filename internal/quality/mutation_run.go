@@ -114,11 +114,10 @@ func (r Runner) Mutate(ctx context.Context, s Selection, jobs int) (MutationRepo
 	if report.Score.Denominator == 0 {
 		report.Qualified = false
 	}
-	data, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
+	if err = WriteJSON(filepath.Join(runReports, "mutation.json"), report); err != nil {
 		return report, err
 	}
-	if err = os.WriteFile(filepath.Join(r.Reports, "mutation.json"), data, 0644); err != nil {
+	if err = WriteJSON(filepath.Join(r.Reports, "mutation.json"), report); err != nil {
 		return report, err
 	}
 	if !report.Qualified {

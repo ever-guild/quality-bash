@@ -152,10 +152,8 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	if command == "qa" || command == "baseline check" || command == "baseline update" {
 		var measurement quality.Measurement
 		defer func() {
-			if measurement.Qualified {
-				if publishErr := quality.PublishGitHub(measurement, returnErr == nil); publishErr != nil && returnErr == nil {
-					returnErr = publishErr
-				}
+			if publishErr := quality.PublishGitHub(measurement, returnErr == nil); publishErr != nil && returnErr == nil {
+				returnErr = publishErr
 			}
 		}()
 		if command == "qa" {

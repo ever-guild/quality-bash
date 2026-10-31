@@ -3,6 +3,7 @@ package quality
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -32,6 +33,13 @@ func (r Runner) Settings(ctx context.Context, s Selection, jobs int) (Settings, 
 func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath string) (Measurement, error) {
 	var m Measurement
 	if err := ValidateOutputPaths(r.Root, r.Reports, baselinePath, s); err != nil {
+		return m, err
+	}
+	if err := os.MkdirAll(r.Reports, 0755); err != nil {
+		return m, err
+	}
+	// A failed new run must not leave an earlier report eligible for updates.
+	if err := WriteJSON(filepath.Join(r.Reports, "measurement.json"), m); err != nil {
 		return m, err
 	}
 	settings, err := r.Settings(ctx, s, jobs)

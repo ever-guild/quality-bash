@@ -69,3 +69,28 @@ exit 0
 		t.Fatal("changed tests accepted")
 	}
 }
+
+func TestFailedMeasurementInvalidatesPreviousReport(t *testing.T) {
+	root := t.TempDir()
+	reports := filepath.Join(root, "reports")
+	if err := os.Mkdir(reports, 0700); err != nil {
+		t.Fatal(err)
+	}
+	previous := Measurement{Qualified: true, Fingerprint: "old"}
+	path := filepath.Join(reports, "measurement.json")
+	if err := WriteJSON(path, previous); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", t.TempDir())
+	r := Runner{Root: root, Reports: reports, Timeout: time.Second}
+	if _, err := r.Measure(context.Background(), Selection{Scripts: []string{"a.sh"}, Tests: []string{"a.bats"}}, 1, filepath.Join(root, "baseline.json")); err == nil {
+		t.Fatal("missing tools accepted")
+	}
+	var after Measurement
+	if err := ReadJSON(path, &after); err != nil {
+		t.Fatal(err)
+	}
+	if after.Qualified {
+		t.Fatal("previous report still qualified")
+	}
+}
