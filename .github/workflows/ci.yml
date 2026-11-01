@@ -30,7 +30,7 @@ jobs:
         run: make bundle-tools
       - name: Verify packaged tools
         run: make verify-tools
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: tools-${{ runner.arch }}
           path: tool-dist/
