@@ -41,3 +41,5 @@ jobs:
           ACTION_MUTATION: ${{ steps.quality.outputs.mutation_numerator }}/${{ steps.quality.outputs.mutation_denominator }}
           CLI_MUTATION: ${{ steps.local.outputs.mutation_numerator }}/${{ steps.local.outputs.mutation_denominator }}
         run: make smoke-compare
+      - name: Install and run the published make example
+        run: make smoke-example

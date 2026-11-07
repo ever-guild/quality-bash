@@ -25,7 +25,7 @@ Use `KCOV_PREFIX=/path/to/kcov` to reuse an installation. Default: `.build/kcov`
 | `cmd/package-release` | Reproducible CLI archives |
 | `testdata/basic` | Known coverage 3/5 and mutation score 2/3 |
 
-Own logic and tests are Go. Shell fixtures are inputs. Workflow `run` steps call only `makefile` targets. Keep execution settings in report fingerprints; changing a gate's methodology must remain explicit. See [contribution workflow](contributing.md) for human and agent changes.
+Own logic and tests are Go. Shell fixtures are inputs; `install.sh` only downloads and installs the pinned CLI. Workflow `run` steps call only `makefile` targets. Keep execution settings in report fingerprints; changing a gate's methodology must remain explicit. See [contribution workflow](contributing.md) for human and agent changes.
 
 ## Package and release
 
@@ -38,7 +38,7 @@ make release TOOL_DIST=/path/to/both-architectures RELEASE_DIST=/tmp/release
 Build/verify native tools on both architectures. Packaging requires all eight archives matching the embedded manifest. CLI archives include all four guides, baseline schema, project/dependency licenses and tool manifest.
 
 1. Update the CLI/package version, Action URLs, make targets and release smoke reference. Keep dependency versions pinned; update notices for any new dependency.
-2. Build archives and update both SHA-256 pins in `action.yml` and `makefile`. Bundled documentation changes archive hashes too.
+2. Build archives and update both SHA-256 pins in `action.yml`, `makefile` and `install.sh`. Bundled documentation changes archive hashes too.
 3. Run Codex Security CLI on the final revision, retain its report, resolve in-scope findings and re-audit subsequent changes. Use the trusted-code boundary in the user guide.
 4. Accumulate changes, sign commits, push once and require native CI on both architectures. Create a signed tag and publish the new prerelease with archives, `SHA256SUMS`, limitations and changelog. Never replace an existing release's tag/assets.
 5. Run `.github/workflows/release-smoke.yml` once. It downloads the published CLI and Action on both architectures and compares metrics. Record successful CI/smoke links in release notes.

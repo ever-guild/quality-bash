@@ -8,7 +8,7 @@ TOOL_DIST ?= tool-dist
 RELEASE_DIST ?= dist
 export KCOV_PREFIX TOOL_DIST RELEASE_DIST
 
-.PHONY: check test integration vet build version ci-deps kcov bundle-tools verify-tools release smoke-metrics smoke-cli smoke-compare
+.PHONY: check test integration vet build version ci-deps kcov bundle-tools verify-tools release smoke-metrics smoke-cli smoke-compare smoke-example
 
 check: test vet build
 
@@ -50,8 +50,8 @@ smoke-metrics:
 
 smoke-cli:
 	case "$$RUNNER_ARCH_VALUE" in \
-	  X64) arch=amd64; digest=0f6745e4c4163711575a73dd184047f9393c19cc5193f39ec0c48d8aa9f39ee3 ;; \
-	  ARM64) arch=arm64; digest=3e9b9fb9d63782d9fee13d186b89a2070a984900634c76ba9d024d410759eec7 ;; \
+	  X64) arch=amd64; digest=85ba20ab7a63e49439f72426d6a8725d456b55f368fc94443a41b46f5a8376e3 ;; \
+	  ARM64) arch=arm64; digest=4bdcba1c365d797e6a4e4ba430d6532bc5d99fccae71283f48804cc6763089ae ;; \
 	  *) exit 1 ;; \
 	esac; \
 	directory=$$(mktemp -d "$$RUNNER_TEMP/quality-bash-local.XXXXXXXX"); \
@@ -68,3 +68,11 @@ smoke-cli:
 smoke-compare:
 	test "$$ACTION_COVERAGE" = "$$CLI_COVERAGE"
 	test "$$ACTION_MUTATION" = "$$CLI_MUTATION"
+
+smoke-example:
+	directory=$$(mktemp -d "$$RUNNER_TEMP/quality-bash-example.XXXXXXXX"); \
+	trap 'rm -rf -- "$$directory"' EXIT; \
+	export XDG_BIN_HOME="$$directory/bin" XDG_CACHE_HOME="$$directory/cache"; \
+	$(MAKE) -C example quality-bash-install; \
+	$(MAKE) -C example quality-bash-tools; \
+	$(MAKE) -C example quality-bash-check ARGS='--jobs 2'

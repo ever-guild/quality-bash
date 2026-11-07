@@ -4,15 +4,19 @@ Check Bash syntax, ShellCheck diagnostics, Bats tests, line coverage and mutatio
 
 ## Install
 
-Download the Linux amd64 or arm64 archive and `SHA256SUMS` from [Releases](https://github.com/ever-guild/quality-bash/releases). Ubuntu 24.04 is tested on both architectures. No Go or sudo is needed.
+Linux amd64/arm64; Ubuntu 24.04 is tested. Install the pinned alpha.2 CLI without Go or sudo:
 
 ```sh
-sha256sum --ignore-missing --check SHA256SUMS  # require OK for your archive
-# Extract the matching quality-bash-<version>-linux-<architecture>.tar.gz
-./quality-bash --help
-./quality-bash tools install
-./quality-bash doctor
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+  https://raw.githubusercontent.com/ever-guild/quality-bash/v1.0.0-alpha.2/install.sh -o install.sh
+bash install.sh
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+quality-bash --help
+quality-bash tools install
+quality-bash doctor
 ```
+
+The installer verifies the archive against its pinned SHA-256 and uses `XDG_BIN_HOME` (default `$HOME/.local/bin`). Running it again reinstalls the pinned version. Alternatively download an archive and `SHA256SUMS` from [Releases](https://github.com/ever-guild/quality-bash/releases), verify with `sha256sum --ignore-missing --check SHA256SUMS` and extract it.
 
 `--help` works without tools starting with alpha.2. Installation explicitly downloads pinned Bash, Bats, ShellCheck and unmodified kcov 43 into the user cache. Checks never install dependencies automatically.
 
@@ -21,22 +25,34 @@ sha256sum --ignore-missing --check SHA256SUMS  # require OK for your archive
 Put matching `.sh` and `.bats` files in the project root. Multiple pairs and test helpers are supported; no extra configuration or makefile is required.
 
 ```sh
-./quality-bash qa --root /path/to/project
+quality-bash qa --root /path/to/project
 # First run: a missing baseline fails AFTER measurements. Then:
-./quality-bash baseline update --root /path/to/project --create
-./quality-bash qa --root /path/to/project
+quality-bash baseline update --root /path/to/project --create
+quality-bash qa --root /path/to/project
 ```
 
 Commit `quality-baseline.json`. `qa` and `baseline check` run fresh checks without changing it. Use `baseline update` after an improvement; neither threshold can decrease. Use identical root, reports, jobs and timeout settings when measuring and updating.
 
 Run individual checks with `lint`, `test`, `coverage` or `mutation`. Repeat `--script` and `--test` for explicit paths relative to `--root`; all selected tests run against each mutant. Other options: `--reports`, `--baseline`, `--jobs`, `--timeout`, `--base-revision <commit>`. Diagnostics, HTML, Cobertura and JSON reports default to `quality-reports/`.
 
+## Make example
+
+The repository's [example](https://github.com/ever-guild/quality-bash/tree/v1.0.0-alpha.2/example) includes a script, test and baseline:
+
+```sh
+make -C example quality-bash-install
+make -C example quality-bash-tools
+make -C example quality-bash-check
+```
+
+Copy `example/makefile` into your project for the same commands. On a new project, run `quality-bash-check` to measure, then `quality-bash-baseline-create`; use `quality-bash-baseline-update` after improvements. `ARGS='--jobs 2'` passes CLI options. `quality-bash-lint` runs lint; automatic fixing is not supported. Ordinary checks never install anything.
+
 ## Baseline v2 (alpha.2)
 
 `coverage.coveredLines` / `coverage.totalLines` and `mutation.killed` / (`killed` + `survived`) define the minimum ratios. Comparisons use exact counts, without rounded percentages. The file also records scope and measurement methodology. The embedded [JSON Schema](internal/quality/schema/baseline-v2.schema.json) validates it offline; unknown fields, duplicate keys and invalid counts fail.
 
 ```sh
-./quality-bash baseline update --root /path/to/project --upgrade-schema
+quality-bash baseline update --root /path/to/project --upgrade-schema
 ```
 
 This converts v1 to v2 without tools or changing thresholds and saves a migration record. v1 remains readable for checks and target-revision comparison. A methodology/scope change requires fresh measurements and `baseline update --migrate 'reason'`. This is separate from format conversion; compatible thresholds cannot use migration to decrease.
