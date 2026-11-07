@@ -20,7 +20,7 @@ func main() {
 }
 func run() error {
 	dir := flag.String("directory", "tool-dist", "directory containing both architectures")
-	release := flag.String("release", "v1.0.0-alpha.1", "release tag")
+	release := flag.String("release", "v1.0.0-alpha.2", "release tag")
 	output := flag.String("output", "tools-manifest.json", "manifest destination")
 	flag.Parse()
 	manifest := install.Manifest{Schema: 1}

@@ -20,6 +20,9 @@ func ReadJSON(path string, target any) error {
 	if err != nil {
 		return err
 	}
+	if err := rejectDuplicateKeys(data); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err = decoder.Decode(target); err != nil {
@@ -73,7 +76,7 @@ func (m Measurement) ValidateFresh(fingerprint string) error {
 	if fingerprint == "" || m.Fingerprint != fingerprint {
 		return fmt.Errorf("stale report: sources, tests, helpers or settings changed; rerun measurements")
 	}
-	if m.Baseline.Schema != 1 || len(m.Baseline.Files) == 0 {
+	if (m.Baseline.Schema != 1 && m.Baseline.Schema != 2) || len(m.Baseline.Files) == 0 {
 		return fmt.Errorf("invalid report scope or schema")
 	}
 	if err := m.Baseline.Coverage.Validate(); err != nil {
@@ -117,6 +120,9 @@ func UpdateBaseline(path string, m Measurement, fingerprint string, create bool)
 	}
 	if create {
 		return fmt.Errorf("baseline already exists; omit --create")
+	}
+	if previous.Schema == 1 && m.Baseline.Schema == 2 {
+		return fmt.Errorf("baseline schema v1: run baseline update --upgrade-schema first")
 	}
 	if err = previous.Check(m.Baseline); err != nil {
 		return err

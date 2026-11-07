@@ -1,5 +1,6 @@
 {
-  "schema": 1,
+  "$schema": "https://raw.githubusercontent.com/ever-guild/quality-bash/v1.0.0-alpha.2/internal/quality/schema/baseline-v2.schema.json",
+  "schema": 2,
   "files": [
     "example.sh"
   ],
@@ -18,17 +19,15 @@
       "return-code"
     ],
     "parameters": {
-      "jobs": "2",
-      "parser": "mvdan.cc/sh/v3@v3.12.0",
-      "timeout": "5m0s"
+      "parser": "mvdan.cc/sh/v3@v3.12.0"
     }
   },
   "coverage": {
-    "numerator": 3,
-    "denominator": 5
+    "coveredLines": 3,
+    "totalLines": 5
   },
   "mutation": {
-    "numerator": 2,
-    "denominator": 3
+    "killed": 2,
+    "survived": 1
   }
 }

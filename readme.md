@@ -1,85 +1,63 @@
 # quality-bash
 
-Go CLI for Bash linting, Bats tests, line coverage, mutation testing and quality regression gates.
+Check Bash syntax, ShellCheck diagnostics, Bats tests, line coverage and mutation score. `qa` fails if either quality metric falls below the committed baseline.
 
-## Release installation
+## Install
 
-The `v1.0.0-alpha.1` release targets Linux amd64 and arm64. Download the matching `quality-bash-v1.0.0-alpha.1-linux-<architecture>.tar.gz` and `SHA256SUMS` from the [release page](https://github.com/ever-guild/quality-bash/releases/tag/v1.0.0-alpha.1). The commands below use amd64; substitute arm64 where appropriate. They become available when the release assets are published.
+Download the Linux amd64 or arm64 archive and `SHA256SUMS` from [Releases](https://github.com/ever-guild/quality-bash/releases). Ubuntu 24.04 is tested on both architectures. No Go or sudo is needed.
 
-```console
-sha256sum --ignore-missing --check SHA256SUMS
-tar -xzf quality-bash-v1.0.0-alpha.1-linux-amd64.tar.gz
-./quality-bash version
+```sh
+sha256sum --ignore-missing --check SHA256SUMS  # require OK for your archive
+# Extract the matching quality-bash-<version>-linux-<architecture>.tar.gz
+./quality-bash --help
 ./quality-bash tools install
 ./quality-bash doctor
+```
+
+`--help` works without tools starting with alpha.2. Installation explicitly downloads pinned Bash, Bats, ShellCheck and unmodified kcov 43 into the user cache. Checks never install dependencies automatically.
+
+## Check a project
+
+Put matching `.sh` and `.bats` files in the project root. Multiple pairs and test helpers are supported; no extra configuration or makefile is required.
+
+```sh
+./quality-bash qa --root /path/to/project
+# First run: a missing baseline fails AFTER measurements. Then:
+./quality-bash baseline update --root /path/to/project --create
 ./quality-bash qa --root /path/to/project
 ```
 
-Confirm that checksum verification reports `OK` for the chosen archive before extracting it. Go and sudo are not required. Keep the binary in a directory on your PATH, or invoke its absolute path. Tool downloads need HTTPS access to GitHub; subsequent checks use the user cache without network installation. Bundled native tools are qualified on Ubuntu 24.04 for both architectures. Other Linux distributions are not yet qualified.
+Commit `quality-baseline.json`. `qa` and `baseline check` run fresh checks without changing it. Use `baseline update` after an improvement; neither threshold can decrease. Use identical root, reports, jobs and timeout settings when measuring and updating.
 
-## Local usage
+Run individual checks with `lint`, `test`, `coverage` or `mutation`. Repeat `--script` and `--test` for explicit paths relative to `--root`; all selected tests run against each mutant. Other options: `--reports`, `--baseline`, `--jobs`, `--timeout`, `--base-revision <commit>`. Diagnostics, HTML, Cobertura and JSON reports default to `quality-reports/`.
 
-Run `quality-bash tools install` explicitly to install the pinned Bash, Bats, ShellCheck and kcov packages into the user cache without sudo. Ordinary checks only use the installed packages and never download or update dependencies.
+## Baseline v2 (alpha.2)
 
-```console
-./quality-bash tools install
-./quality-bash doctor
-./quality-bash lint --root /path/to/project
-./quality-bash test --root /path/to/project
-./quality-bash coverage --root /path/to/project
-./quality-bash mutation --root /path/to/project --jobs 2
-./quality-bash qa --root /path/to/project --jobs 2
+`coverage.coveredLines` / `coverage.totalLines` and `mutation.killed` / (`killed` + `survived`) define the minimum ratios. Comparisons use exact counts, without rounded percentages. The file also records scope and measurement methodology. The embedded [JSON Schema](internal/quality/schema/baseline-v2.schema.json) validates it offline; unknown fields, duplicate keys and invalid counts fail.
+
+```sh
+./quality-bash baseline update --root /path/to/project --upgrade-schema
 ```
+
+This converts v1 to v2 without tools or changing thresholds and saves a migration record. v1 remains readable for checks and target-revision comparison. A methodology/scope change requires fresh measurements and `baseline update --migrate 'reason'`. This is separate from format conversion; compatible thresholds cannot use migration to decrease.
 
 ## GitHub Action
 
-After release publication, connect the Action as follows. Checkout history is needed for target-revision baseline comparisons; pull requests use their base commit by default.
-
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     fetch-depth: 0
-- uses: ever-guild/quality-bash@v1.0.0-alpha.1
+- uses: ever-guild/quality-bash@v1.0.0-alpha.2
 ```
 
-The default project has matching `example.sh` and `example.bats` files plus `quality-baseline.json`. Multiple pairs are supported. Unmatched Bats files require explicit selection. Repeat `--script` and `--test` for explicit paths; all selected tests apply to each mutant. Paths are relative to `--root`. Use `--reports`, `--baseline`, `--jobs` and `--timeout` to control execution. Reports may be outside the project.
+PRs compare against the target revision by default. The Action supplies summary metrics, outputs and diagnostic artifacts, using a fresh tool cache. Ordinary checks need no secrets or write permissions.
 
-Each Action invocation installs tools into its own fresh cache under the runner's temporary directory. It does not reuse the OS user's persistent tool cache across jobs. Local CLI caches belong to the current user; do not share an OS account or runner between mutually untrusted workloads.
+## Measurement and limits
 
-## Baseline lifecycle
+- Coverage counts selected Bash lines; it does not measure statements inside awk/jq. Empty reports or absent tracing fail. kcov 43 can mix coverage for byte-identical files: do not rely on metrics for that case.
+- Mutation operators: `[[ ]]` `==`/`!=`, `-eq`/`-ne`, `-lt`/`-ge`, `-gt`/`-le`, `&&`/`||`; binary arithmetic `+`/`-`, `*`→`+`, `<`/`>=`, `>`/`<=`, `==`/`!=`; literal `exit`/`return` `0`/`1`. Strings, comments and embedded languages are not mutated.
+- Invalid mutants are reported but excluded from the score. No valid mutants, timeouts or infrastructure errors fail qualification.
+- Run only trusted scripts, tests and helpers. They execute as your user; temporary copies are not sandboxes and cannot prevent deliberate falsification. Review fork code; isolate mutually untrusted workloads. Timeout cleanup kills process groups but cannot contain deliberate escapes.
+- Symlinks, special project files and commas in selected coverage paths are unsupported. Tool versions affect baseline compatibility; jobs and timeout affect report freshness, not baseline compatibility in v2.
 
-Run `qa` to produce fresh measurements. If the baseline is absent, the command fails after measurement; create it explicitly with `baseline update --create`, using the same root, reports, jobs and timeout arguments. Then run `qa` again. `qa` never modifies the baseline.
-
-`baseline check` runs fresh checks and compares their in-memory results with the baseline, just like `qa`; it never trusts a saved measurement as evidence that tests passed. `baseline update` requires a qualified report matching current sources, tests, helper files and settings and is a local maintenance operation, not a CI gate. Updates cannot lower either ratio. Ratios use exact integer comparison, without percentage rounding. Use `--base-revision <commit>` to enforce the target revision's baseline as well as the working copy.
-
-Changes to scope or methodology require `baseline update --migrate 'explanation'`. Migration writes the previous and replacement baselines to `quality-baseline.json.migration.json`. Compatible baselines cannot use migration to lower thresholds. Target-revision checks continue to reject incompatible methodology until the migration is accepted in the target branch.
-
-## Measurement semantics
-
-Coverage uses kcov's PS4 Bash tracing and Cobertura line data. Only selected scripts count; duplicate line records are merged by line number. Empty reports, missing selected scripts and absence of any hits fail. HTML and raw Cobertura remain in the unique coverage report directory. Bash-level coverage cannot measure branches or statements inside embedded awk or jq programs; their invocation is the relevant Bash statement.
-
-The initial AST mutation set changes `[[ ... ]]` comparisons and boolean operators, selected binary arithmetic operators, and literal `exit` or `return` codes 0 and 1. It does not mutate comments, arbitrary strings, URLs or embedded awk/jq source. IDs depend on method, file, byte offset, operator and replacement. Every mutant runs in a temporary project copy after the original tests pass. A complete Bats TAP result is required. Invalid syntax is recorded separately; timeouts and infrastructure errors block qualification and never count as detected mutants.
-
-The `bash-ast-v1` operators are fixed:
-
-| AST context | Replacements |
-|---|---|
-| Binary `[[ ... ]]` tests | `==` ↔ `!=`, `-eq` ↔ `-ne`, `-lt` ↔ `-ge`, `-gt` ↔ `-le`, `&&` ↔ `\|\|` |
-| Binary arithmetic | `+` ↔ `-`, `*` → `+`, `<` ↔ `>=`, `>` ↔ `<=`, `==` ↔ `!=` |
-| Literal `exit` and `return` arguments | `0` ↔ `1` |
-
-There are no operators for single-bracket external `test` commands, regex bodies, unary arithmetic or arbitrary numeric literals. Each replacement affects one AST operator or argument. The mutation ratio is detected / (detected + survived); invalid mutants are listed but excluded from that denominator. Zero valid mutants is an error. Any timeout or infrastructure failure invalidates the entire measurement, regardless of the ratio.
-
-## Execution limitations
-
-### Trusted project code
-
-Only run scripts, Bats tests and helpers that you trust. The quality gate measures this trusted code and detects quality regressions; it does not protect measurement integrity against code deliberately trying to falsify results. A malicious test running as the same user can replace tools, temporarily rewrite source, or fabricate reports. Fingerprints, checksum verification and temporary copies do not prevent such same-user attacks, and mandatory test sandboxing is outside this release's scope.
-
-Fork PR support means the Action requires no secrets or write permissions. It does not make arbitrary fork code safe to execute: review code before execution and apply your runner's isolation and trust policy. Keep mutually untrusted workloads on separate runners or OS accounts.
-
-Tests execute with the current user's permissions. Temporary copies are not security sandboxes. Linux process groups are terminated on cancellation or timeout; programs deliberately escaping the process group are not contained. Symlinks and nonregular project files are currently unsupported. kcov's comma-separated path interface does not support commas in selected paths. Integration tests assert exact script stdout, stderr, exit status and pseudo-terminal output both with and without coverage. Collector diagnostics are retained separately in the command logs.
-
-Baselines are tied to their recorded tool versions and settings. A different toolchain requires an explicit methodology migration.
-
-For development, testing and release procedures, see [contributing.md](contributing.md).
+[Changes](changelog.md) · [Development](develop.md) · [Contributing](contributing.md)

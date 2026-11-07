@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ever-guild/quality-bash/internal/install"
+	"github.com/ever-guild/quality-bash/internal/quality"
 	"io"
 	"os"
 	"os/exec"
@@ -27,10 +28,10 @@ func main() {
 }
 func run() error {
 	output := flag.String("output", "dist", "artifact directory")
-	version := flag.String("version", "dev", "dev or v1.0.0-alpha.1")
+	version := flag.String("version", "dev", "dev or v1.0.0-alpha.2")
 	toolsDirectory := flag.String("tools", "", "optional directory containing the eight pinned tool archives")
 	flag.Parse()
-	if *version != "dev" && *version != "v1.0.0-alpha.1" {
+	if *version != "dev" && *version != "v1.0.0-alpha.2" {
 		return fmt.Errorf("unsupported release version")
 	}
 	if *version != "dev" {
@@ -58,7 +59,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	readme, err := os.ReadFile("reamde.md")
+	readme, err := os.ReadFile("readme.md")
 	if err != nil {
 		return err
 	}
@@ -66,12 +67,20 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	extra := map[string][]byte{}
+	for _, name := range []string{"develop.md", "changelog.md", "licenses/jsonschema.txt", "licenses/x-text.txt"} {
+		data, err := os.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		extra[name] = data
+	}
 	var checksums bytes.Buffer
 	for _, arch := range []string{"amd64", "arm64"} {
 		binary := filepath.Join(temp, "quality-bash-"+arch)
 		buildVersion := *version
 		if buildVersion == "dev" {
-			buildVersion = "v1.0.0-alpha.1-dev"
+			buildVersion = "v1.0.0-alpha.2-dev"
 		}
 		cmd := exec.Command("go", "build", "-buildvcs=false", "-trimpath", "-ldflags=-s -w -X main.version="+buildVersion, "-o", binary, "./cmd/quality-bash")
 		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH="+arch, "CGO_ENABLED=0")
@@ -84,11 +93,15 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		files := map[string][]byte{"quality-bash": data, "licenses/mvdan-sh.txt": license, "BUILD-STATUS.txt": []byte("Development build. Not a qualified v1.0.0-alpha.1 release.\n")}
+		files := map[string][]byte{"quality-bash": data, "licenses/mvdan-sh.txt": license, "BUILD-STATUS.txt": []byte("Development build. Not a qualified release.\n")}
 		files["licenses/go.txt"] = goLicense
 		files["LICENSE"] = projectLicense
-		files["reamde.md"] = readme
+		files["readme.md"] = readme
 		files["contributing.md"] = contributing
+		files["internal/quality/schema/baseline-v2.schema.json"] = quality.BaselineSchema
+		for name, content := range extra {
+			files[name] = content
+		}
 		if *version != "dev" {
 			files["BUILD-STATUS.txt"] = []byte("Version: " + *version + "\n")
 			files["tools-manifest.json"] = install.BundledManifest

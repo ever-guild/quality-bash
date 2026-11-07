@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/ever-guild/quality-bash/internal/install"
@@ -14,7 +15,7 @@ import (
 	"time"
 )
 
-var version = "v1.0.0-alpha.1-dev"
+var version = "v1.0.0-alpha.2-dev"
 
 type paths []string
 
@@ -22,7 +23,24 @@ func (p *paths) String() string     { return fmt.Sprint([]string(*p)) }
 func (p *paths) Set(v string) error { *p = append(*p, v); return nil }
 func run(ctx context.Context, args []string) (returnErr error) {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: quality-bash <version|doctor|lint|test|mutation> [options]")
+		return errors.New(usage)
+	}
+	if args[0] == "--help" || args[0] == "-h" {
+		fmt.Println(usage)
+		return nil
+	}
+	if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
+		switch args[0] {
+		case "version":
+			fmt.Println("Usage: quality-bash version\nPrint the CLI version. No tools are required.")
+			return nil
+		case "tools":
+			fmt.Println("Usage: quality-bash tools install [options]\nInstall the pinned tools explicitly. Use tools install --help for options.")
+			return nil
+		case "baseline":
+			fmt.Println("Usage: quality-bash baseline <check|update> [options]\ncheck runs fresh checks; update saves qualified results. Use the subcommand's --help for options.")
+			return nil
+		}
 	}
 	if args[0] == "version" {
 		if len(args) != 1 {
@@ -48,10 +66,19 @@ func run(ctx context.Context, args []string) (returnErr error) {
 		command += " " + args[1]
 		args = append([]string{command}, args[2:]...)
 	}
+	if _, ok := commandHelp[command]; !ok {
+		return fmt.Errorf("unknown command %q; use --help", command)
+	}
+	flags.SetOutput(os.Stdout)
+	flags.Usage = func() {
+		fmt.Printf("Usage: quality-bash %s [options]\n%s\n\nOptions:\n", command, commandHelp[command])
+		flags.PrintDefaults()
+	}
 	baseline := flags.String("baseline", "quality-baseline.json", "baseline path relative to root")
 	baseRevision := flags.String("base-revision", "", "also enforce baseline from this Git revision")
 	create := flags.Bool("create", false, "explicitly create first baseline")
 	migrate := flags.String("migrate", "", "explicit baseline migration explanation (baseline update only)")
+	upgrade := flags.Bool("upgrade-schema", false, "convert baseline v1 to v2 without changing thresholds or running tools")
 	root := flags.String("root", ".", "project root")
 	reports := flags.String("reports", "quality-reports", "diagnostics directory relative to root")
 	timeout := flags.Duration("timeout", 5*time.Minute, "timeout per external process")
@@ -60,6 +87,9 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	flags.Var(&scripts, "script", "selected Bash file (repeatable)")
 	flags.Var(&tests, "test", "selected Bats file (repeatable)")
 	if err := flags.Parse(args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 	if flags.NArg() != 0 {
@@ -70,6 +100,43 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	}
 	if *jobs < 1 {
 		return fmt.Errorf("jobs must be positive")
+	}
+	if (*create || *migrate != "" || *upgrade) && command != "baseline update" {
+		return fmt.Errorf("--create, --migrate and --upgrade-schema require baseline update")
+	}
+	if *upgrade {
+		if *create || *migrate != "" || *baseRevision != "" {
+			return fmt.Errorf("--upgrade-schema cannot be combined with --create, --migrate or --base-revision")
+		}
+		path := *baseline
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(*root, path)
+		}
+		return quality.UpgradeBaseline(path)
+	}
+	// Reject invalid policy documents before looking up or executing tools.
+	if command == "qa" || command == "baseline check" || command == "baseline update" {
+		path := *baseline
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(*root, path)
+		}
+		var policy quality.Baseline
+		path, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		if err := quality.ReadJSON(path, &policy); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		} else if err := policy.Check(policy); err != nil {
+			return err
+		}
+		if *baseRevision != "" {
+			if _, err := quality.ReadGitBaseline(ctx, *root, path, *baseRevision, *timeout); err != nil {
+				return err
+			}
+		}
 	}
 	if command == "tools install" || *toolsManifest != "" || len(install.BundledManifest) != 0 {
 		data := install.BundledManifest

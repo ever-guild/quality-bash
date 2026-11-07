@@ -43,10 +43,10 @@ type Baseline struct {
 }
 
 func (b Baseline) Check(current Baseline) error {
-	if b.Schema != 1 || current.Schema != 1 {
+	if (b.Schema != 1 && b.Schema != 2) || (current.Schema != 1 && current.Schema != 2) {
 		return fmt.Errorf("unsupported baseline schema")
 	}
-	if !reflect.DeepEqual(b.Files, current.Files) || !reflect.DeepEqual(b.Method, current.Method) {
+	if !reflect.DeepEqual(b.Files, current.Files) || !reflect.DeepEqual(comparableMethod(b.Method), comparableMethod(current.Method)) {
 		return fmt.Errorf("incompatible scope or methodology: explicit baseline migration required")
 	}
 	if err := b.Coverage.Validate(); err != nil {

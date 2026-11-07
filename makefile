@@ -41,7 +41,7 @@ verify-tools:
 	$(GO) run ./cmd/check-tool-bundles --directory "$$TOOL_DIST"
 
 release:
-	$(GO) run ./cmd/package-release --version v1.0.0-alpha.1 --tools "$$TOOL_DIST" --output "$$RELEASE_DIST"
+	$(GO) run ./cmd/package-release --version v1.0.0-alpha.2 --tools "$$TOOL_DIST" --output "$$RELEASE_DIST"
 
 smoke-metrics:
 	test "$$COVERED/$$LINES" = '3/5'
@@ -50,15 +50,15 @@ smoke-metrics:
 
 smoke-cli:
 	case "$$RUNNER_ARCH_VALUE" in \
-	  X64) arch=amd64; digest=cc10fef98cac6450f191161f8a83a105a043bfb5310fe555a4a9e5f2a809253f ;; \
-	  ARM64) arch=arm64; digest=b656d373c312b626724913e397f8aa08290ac3298c31e3e9b5bec1d6920546cb ;; \
+	  X64) arch=amd64; digest=0f6745e4c4163711575a73dd184047f9393c19cc5193f39ec0c48d8aa9f39ee3 ;; \
+	  ARM64) arch=arm64; digest=3e9b9fb9d63782d9fee13d186b89a2070a984900634c76ba9d024d410759eec7 ;; \
 	  *) exit 1 ;; \
 	esac; \
 	directory=$$(mktemp -d "$$RUNNER_TEMP/quality-bash-local.XXXXXXXX"); \
 	trap 'rm -rf -- "$$directory"' EXIT; \
 	export XDG_CACHE_HOME="$$directory/cache"; \
-	release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.1; \
-	asset="quality-bash-v1.0.0-alpha.1-linux-$$arch.tar.gz"; \
+	release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.2; \
+	asset="quality-bash-v1.0.0-alpha.2-linux-$$arch.tar.gz"; \
 	curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$$release/$$asset" -o "$$directory/$$asset"; \
 	(cd "$$directory"; printf '%s  %s\n' "$$digest" "$$asset" > selected.sha256; sha256sum --check selected.sha256; tar -xzf "$$asset"); \
 	"$$directory/quality-bash" version; \

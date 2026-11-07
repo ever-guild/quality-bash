@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 type Settings struct {
@@ -27,7 +26,7 @@ func (r Runner) Settings(ctx context.Context, s Selection, jobs int) (Settings, 
 	return Settings{Selection: s, Jobs: jobs, Timeout: r.Timeout.String(), Method: Method{
 		Coverage: "kcov-ps4-cobertura-lines-v1", Tools: tools, Mutation: MutationMethod,
 		Operators:  []string{"condition", "arithmetic", "return-code"},
-		Parameters: map[string]string{"jobs": strconv.Itoa(jobs), "timeout": r.Timeout.String(), "parser": "mvdan.cc/sh/v3@v3.12.0"},
+		Parameters: map[string]string{"parser": "mvdan.cc/sh/v3@v3.12.0"},
 	}}, nil
 }
 func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath string) (Measurement, error) {
@@ -72,7 +71,7 @@ func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath
 	if before != after {
 		return m, fmt.Errorf("project changed during measurement; report cannot qualify")
 	}
-	m = Measurement{Fingerprint: after, Qualified: true, Baseline: Baseline{Schema: 1, Files: s.Scripts, Method: settings.Method, Coverage: coverage.Score, Mutation: mutation.Score}}
+	m = Measurement{Fingerprint: after, Qualified: true, Baseline: Baseline{Schema: 2, Files: s.Scripts, Method: settings.Method, Coverage: coverage.Score, Mutation: mutation.Score}}
 	if err = WriteJSON(filepath.Join(r.Reports, "measurement.json"), m); err != nil {
 		return m, err
 	}

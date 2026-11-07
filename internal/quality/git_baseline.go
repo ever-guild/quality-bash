@@ -55,5 +55,8 @@ func ReadGitBaseline(ctx context.Context, root, path, revision string, timeout t
 	if decoder.Decode(&extra) != io.EOF {
 		return baseline, fmt.Errorf("trailing data in target baseline")
 	}
+	if err := baseline.Check(baseline); err != nil {
+		return baseline, err
+	}
 	return baseline, nil
 }
