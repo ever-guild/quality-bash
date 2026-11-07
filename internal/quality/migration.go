@@ -46,6 +46,12 @@ func MigrateBaseline(path string, m Measurement, fingerprint, reason string) err
 
 // UpgradeBaseline changes only the representation, never the measured thresholds.
 func UpgradeBaseline(path string) error {
+	// Reject unsupported paths before reading a baseline or creating any record.
+	for _, output := range []string{path, path + ".lock", path + ".migration.json"} {
+		if err := rejectSymlinkComponents(output); err != nil {
+			return err
+		}
+	}
 	unlock, err := lockBaseline(path)
 	if err != nil {
 		return err

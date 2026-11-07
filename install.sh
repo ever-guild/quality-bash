@@ -13,8 +13,8 @@ esac
 [[ $# -le 1 ]] || { printf 'Too many arguments\n' >&2; exit 2; }
 [[ $(uname -s) == Linux ]] || { printf 'Only Linux is supported\n' >&2; exit 1; }
 case "$(uname -m)" in
-  x86_64) arch=amd64; digest=85ba20ab7a63e49439f72426d6a8725d456b55f368fc94443a41b46f5a8376e3 ;;
-  aarch64|arm64) arch=arm64; digest=4bdcba1c365d797e6a4e4ba430d6532bc5d99fccae71283f48804cc6763089ae ;;
+  x86_64) arch=amd64; digest=dd6ed1b1b2c6009ebbdd5e14b5f1c22b0e010d37cd25c194987df118f3df6c49 ;;
+  aarch64|arm64) arch=arm64; digest=ff3f5c1e1feafcee3f291a8869a6ddaeb82a8bfb3694912d34b773e62f9b5242 ;;
   *) printf 'Unsupported architecture\n' >&2; exit 1 ;;
 esac
 destination=${XDG_BIN_HOME:-${HOME:?Set HOME or XDG_BIN_HOME}/.local/bin}

@@ -87,3 +87,44 @@ func TestBaselineV2ValidationAndUpgrade(t *testing.T) {
 		t.Fatal("failed upgrade modified baseline")
 	}
 }
+
+func TestUpgradeRejectsSymlinksBeforeWriting(t *testing.T) {
+	for _, suffix := range []string{"", ".lock", ".migration.json"} {
+		t.Run("baseline"+suffix, func(t *testing.T) {
+			directory := t.TempDir()
+			path := filepath.Join(directory, "baseline.json")
+			external := filepath.Join(t.TempDir(), "private.json")
+			old := validV2(t)
+			old.Schema = 1
+			if err := WriteJSON(external, old); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(external)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if suffix != "" {
+				if err := WriteJSON(path, old); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.Symlink(external, path+suffix); err != nil {
+				t.Fatal(err)
+			}
+			if err := UpgradeBaseline(path); err == nil || !strings.Contains(err.Error(), "symlink") {
+				t.Fatalf("expected symlink rejection, got %v", err)
+			}
+			for _, artifact := range []string{".lock", ".migration.json"} {
+				if artifact != suffix {
+					if _, err := os.Lstat(path + artifact); !os.IsNotExist(err) {
+						t.Fatalf("unexpected artifact %s: %v", artifact, err)
+					}
+				}
+			}
+			after, err := os.ReadFile(external)
+			if err != nil || string(after) != string(before) {
+				t.Fatal("external baseline changed", err)
+			}
+		})
+	}
+}
