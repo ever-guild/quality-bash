@@ -4,7 +4,7 @@ SHELL := /bin/bash
 export XDG_BIN_HOME ?= $(HOME)/.local/bin
 
 QUALITY_BASH ?= $(XDG_BIN_HOME)/quality-bash
-QUALITY_BASH_INSTALLER := https://raw.githubusercontent.com/ever-guild/quality-bash/refs/heads/main/install.sh
+QUALITY_BASH_INSTALLER := https://raw.githubusercontent.com/ever-guild/quality-bash/68df4ac53a13a8ec44d2cd20ba9b830751aad615/install.sh
 ARGS ?=
 
 .PHONY: quality-bash-install quality-bash-upgrade
