@@ -42,8 +42,8 @@ smoke-metrics:
 
 smoke-cli:
 	case "$$RUNNER_ARCH_VALUE" in \
-	  X64) arch=amd64; digest=2549eb0a507e1400127106aa9716a54262e29d6a7b94f758e3bed032fa1c7136 ;; \
-	  ARM64) arch=arm64; digest=04b47649ae5d70e2dda74ff7f9bee495dc17f5b27a6bffa08581e5eb21401f71 ;; \
+	  X64) arch=amd64; digest=050ec74d53326674b02e209e52f1386d3adf85ac21013ddd57e169b334e9c87c ;; \
+	  ARM64) arch=arm64; digest=118d2896d827eae3266bb6fb971197a67fe099dfcfc12a8d7684455362364074 ;; \
 	  *) exit 1 ;; \
 	esac; \
 	directory=$$(mktemp -d "$$RUNNER_TEMP/quality-bash-local.XXXXXXXX"); \

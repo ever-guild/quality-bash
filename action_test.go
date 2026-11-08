@@ -30,10 +30,11 @@ func TestActionReportIsolation(t *testing.T) {
 	}{
 		{"normal", "quality-reports", true}, {"nested", "reports/nested", true},
 		{"absolute", "/tmp", false}, {"parent", "../outside", false}, {"inner parent", "a/../reports", false},
-		{"glob", "reports/*", false}, {"pattern", "[ab]", false}, {"newline", "reports\nother", false}, {"trailing newline", "reports\n", false}, {"carriage return", "reports\r", false}, {"empty", "", false}, {"root", ".", false}, {"symlink", "escape/reports", false},
+		{"glob", "reports/*", false}, {"pattern", "[ab]", false}, {"newline", "reports\nother", false}, {"trailing newline", "reports\n", false}, {"carriage return", "reports\r", false}, {"empty", "", false}, {"root", ".", false}, {"project symlink", "escape/reports", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
+			runnerTemp := t.TempDir()
 			outside := t.TempDir()
 			if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
 				t.Fatal(err)
@@ -52,7 +53,7 @@ func TestActionReportIsolation(t *testing.T) {
 					t.Fatal(err)
 				}
 				cmd := exec.Command("bash", "-eu", "-o", "pipefail", "-c", script)
-				cmd.Env = append(os.Environ(), "QB_ROOT="+root, "QB_REPORTS="+tc.reports, "GITHUB_OUTPUT="+output)
+				cmd.Env = append(os.Environ(), "QB_ROOT="+root, "RUNNER_TEMP="+runnerTemp, "QB_REPORTS="+tc.reports, "GITHUB_OUTPUT="+output)
 				diagnostic, err := cmd.CombinedOutput()
 				if (err == nil) != tc.valid {
 					t.Fatalf("valid=%v: %v: %s", tc.valid, err, diagnostic)
@@ -65,7 +66,7 @@ func TestActionReportIsolation(t *testing.T) {
 					continue
 				}
 				path := strings.TrimSpace(strings.TrimPrefix(string(result), "path="))
-				if !strings.HasPrefix(path, root+"/") || seen[path] {
+				if !strings.HasPrefix(path, runnerTemp+"/") || seen[path] {
 					t.Fatal("reports not isolated", path)
 				}
 				seen[path] = true
