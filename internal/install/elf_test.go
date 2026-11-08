@@ -7,14 +7,15 @@ import (
 )
 
 func TestSharedLibraryClosure(t *testing.T) {
-	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
-		t.Skip("Linux amd64 system library fixture")
+	triplet := map[string]string{"amd64": "x86_64-linux-gnu", "arm64": "aarch64-linux-gnu"}[runtime.GOARCH]
+	if runtime.GOOS != "linux" || triplet == "" {
+		t.Skip("Linux amd64/arm64 system library fixture")
 	}
 	binary, err := exec.LookPath("bash")
 	if err != nil {
 		t.Skip("bash required")
 	}
-	libraries, err := SharedLibraries(binary, []string{"/lib/x86_64-linux-gnu", "/usr/lib/x86_64-linux-gnu", "/lib64"})
+	libraries, err := SharedLibraries(binary, []string{"/lib/" + triplet, "/usr/lib/" + triplet, "/lib64", "/lib", "/usr/lib"})
 	if err != nil {
 		t.Fatal(err)
 	}
