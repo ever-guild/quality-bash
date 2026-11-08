@@ -55,6 +55,12 @@ exit 0
 	if err != nil {
 		t.Fatal(err)
 	}
+	if fresh.CoverageCounts != (Ratio{3, 5}) {
+		t.Fatalf("lost coverage counts: %+v", fresh.CoverageCounts)
+	}
+	if fresh.MutationCounts != (Ratio{2, 3}) {
+		t.Fatalf("lost mutation counts: %+v", fresh.MutationCounts)
+	}
 	var baseline Baseline
 	if err = ReadJSON(baselinePath, &baseline); err != nil {
 		t.Fatal(err)
@@ -76,7 +82,8 @@ func TestFailedMeasurementInvalidatesPreviousReport(t *testing.T) {
 	if err := os.Mkdir(reports, 0700); err != nil {
 		t.Fatal(err)
 	}
-	previous := Measurement{Qualified: true, Fingerprint: "old"}
+	previous := Measurement{Qualified: true, Fingerprint: "old", Baseline: validBaseline(t)}
+	previous.MutationCounts = previous.Baseline.Mutation
 	path := filepath.Join(reports, "measurement.json")
 	if err := WriteJSON(path, previous); err != nil {
 		t.Fatal(err)

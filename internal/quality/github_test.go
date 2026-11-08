@@ -18,7 +18,9 @@ func TestGitHubOutput(t *testing.T) {
 	}
 	t.Setenv("GITHUB_OUTPUT", output)
 	t.Setenv("GITHUB_STEP_SUMMARY", summary)
-	m := Measurement{Qualified: true, Baseline: Baseline{Coverage: Ratio{2, 3}, Mutation: Ratio{4, 5}}}
+	m := Measurement{Qualified: true, Baseline: Baseline{Coverage: Ratio{2, 3}, Mutation: Ratio{6667, 10000}}}
+	m.CoverageCounts = Ratio{2, 3}
+	m.MutationCounts = Ratio{2, 3}
 	if err := PublishGitHub(m, false); err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +28,7 @@ func TestGitHubOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(string(data), "existing\n") || !strings.Contains(string(data), "coverage_numerator=2\n") || !strings.Contains(string(data), "passed=false\n") {
+	if !strings.HasPrefix(string(data), "existing\n") || !strings.Contains(string(data), "coverage_numerator=2\n") || !strings.Contains(string(data), "passed=false\n") || !strings.Contains(string(data), "mutation_numerator=2\nmutation_denominator=3\n") {
 		t.Fatal(string(data))
 	}
 }

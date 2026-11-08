@@ -2,130 +2,60 @@ package quality
 
 import (
 	"bytes"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
+	"math/big"
 	"sync"
 
+	qualitybash "github.com/ever-guild/quality-bash"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-const BaselineSchemaURL = "https://raw.githubusercontent.com/ever-guild/quality-bash/v1.0.0-alpha.2/internal/quality/schema/baseline-v2.schema.json"
-
-//go:embed schema/baseline-v2.schema.json
-var BaselineSchema []byte
-
-//go:embed schema/baseline-v1.schema.json
-var legacyBaselineSchema []byte
-
-var compiledLegacySchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
-	return compileBaselineSchema("urn:quality-bash:baseline:v1", legacyBaselineSchema)
-})
-
 var compiledBaselineSchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
-	return compileBaselineSchema(BaselineSchemaURL, BaselineSchema)
-})
-
-func compileBaselineSchema(url string, data []byte) (*jsonschema.Schema, error) {
 	var doc any
-	d := json.NewDecoder(bytes.NewReader(data))
+	d := json.NewDecoder(bytes.NewReader(qualitybash.BaselineSchema))
 	d.UseNumber()
 	if err := d.Decode(&doc); err != nil {
 		return nil, err
 	}
 	c := jsonschema.NewCompiler()
-	if err := c.AddResource(url, doc); err != nil {
+	if err := c.AddResource(qualitybash.BaselineSchemaURL, doc); err != nil {
 		return nil, err
 	}
-	return c.Compile(url)
-}
+	return c.Compile(qualitybash.BaselineSchemaURL)
+})
 
-type baselineV2 struct {
-	SchemaURL string   `json:"$schema,omitempty"`
-	Schema    int      `json:"schema"`
+type baselineDocument struct {
+	SchemaURL string   `json:"$schema"`
 	Files     []string `json:"files"`
 	Method    Method   `json:"method"`
 	Coverage  struct {
-		Covered uint64 `json:"coveredLines"`
-		Total   uint64 `json:"totalLines"`
+		LinePercent json.Number `json:"linePercent"`
 	} `json:"coverage"`
 	Mutation struct {
-		Killed   uint64 `json:"killed"`
-		Survived uint64 `json:"survived"`
+		Score json.Number `json:"score"`
 	} `json:"mutation"`
 }
 
-type baselineLegacy Baseline
-
-func comparableMethod(m Method) Method {
-	parameters := make(map[string]string)
-	for k, v := range m.Parameters {
-		if k != "jobs" && k != "timeout" {
-			parameters[k] = v
-		}
-	}
-	if len(parameters) == 0 {
-		parameters = nil
-	}
-	m.Parameters = parameters
-	return m
-}
-
 func (b Baseline) MarshalJSON() ([]byte, error) {
-	if b.Schema != 2 {
-		return json.Marshal(baselineLegacy(b))
-	}
 	if err := b.Coverage.Validate(); err != nil {
 		return nil, err
 	}
 	if err := b.Mutation.Validate(); err != nil {
 		return nil, err
 	}
-	v := baselineV2{SchemaURL: BaselineSchemaURL, Schema: 2, Files: b.Files, Method: comparableMethod(b.Method)}
-	v.Coverage.Covered, v.Coverage.Total = b.Coverage.Numerator, b.Coverage.Denominator
-	v.Mutation.Killed, v.Mutation.Survived = b.Mutation.Numerator, b.Mutation.Denominator-b.Mutation.Numerator
+	v := baselineDocument{SchemaURL: qualitybash.BaselineSchemaURL, Files: b.Files, Method: b.Method}
+	coverage := b.Coverage.scoreHundredths()
+	v.Coverage.LinePercent = json.Number(fmt.Sprintf("%d.%02d", coverage/100, coverage%100))
+	score := b.Mutation.scoreHundredths()
+	v.Mutation.Score = json.Number(fmt.Sprintf("%d.%02d", score/100, score%100))
 	return json.Marshal(v)
 }
 
 func (b *Baseline) UnmarshalJSON(data []byte) error {
 	if err := rejectDuplicateKeys(data); err != nil {
 		return err
-	}
-	var header struct {
-		Schema int `json:"schema"`
-	}
-	if err := json.Unmarshal(data, &header); err != nil {
-		return err
-	}
-	if header.Schema == 1 || header.Schema == 0 {
-		if header.Schema == 1 {
-			var doc any
-			d := json.NewDecoder(bytes.NewReader(data))
-			d.UseNumber()
-			if err := d.Decode(&doc); err != nil {
-				return err
-			}
-			schema, err := compiledLegacySchema()
-			if err != nil {
-				return err
-			}
-			if err := schema.Validate(doc); err != nil {
-				return fmt.Errorf("legacy baseline schema: %w", err)
-			}
-		}
-		var old baselineLegacy
-		d := json.NewDecoder(bytes.NewReader(data))
-		d.DisallowUnknownFields()
-		if err := d.Decode(&old); err != nil {
-			return err
-		}
-		*b = Baseline(old)
-		return nil
-	}
-	if header.Schema != 2 {
-		return fmt.Errorf("unsupported baseline schema %d", header.Schema)
 	}
 	var doc any
 	d := json.NewDecoder(bytes.NewReader(data))
@@ -140,14 +70,19 @@ func (b *Baseline) UnmarshalJSON(data []byte) error {
 	if err := schema.Validate(doc); err != nil {
 		return fmt.Errorf("baseline schema: %w", err)
 	}
-	var v baselineV2
+	var v baselineDocument
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
 	}
-	if v.Mutation.Survived > math.MaxUint64-v.Mutation.Killed {
-		return fmt.Errorf("mutation count overflow")
+	mutation, err := parsePercent(v.Mutation.Score)
+	if err != nil {
+		return err
 	}
-	result := Baseline{Schema: 2, Files: v.Files, Method: v.Method, Coverage: Ratio{v.Coverage.Covered, v.Coverage.Total}, Mutation: Ratio{v.Mutation.Killed, v.Mutation.Killed + v.Mutation.Survived}}
+	coverage, err := parsePercent(v.Coverage.LinePercent)
+	if err != nil {
+		return err
+	}
+	result := Baseline{Files: v.Files, Method: v.Method, Coverage: coverage, Mutation: mutation}
 	if err := result.Coverage.Validate(); err != nil {
 		return err
 	}
@@ -156,6 +91,18 @@ func (b *Baseline) UnmarshalJSON(data []byte) error {
 	}
 	*b = result
 	return nil
+}
+
+func parsePercent(value json.Number) (Ratio, error) {
+	score, ok := new(big.Rat).SetString(string(value))
+	if !ok {
+		return Ratio{}, fmt.Errorf("invalid percentage")
+	}
+	score.Mul(score, big.NewRat(100, 1))
+	if !score.IsInt() || !score.Num().IsUint64() || score.Num().Uint64() > 10000 {
+		return Ratio{}, fmt.Errorf("percentage must be 0..100 with at most two decimal places")
+	}
+	return Ratio{score.Num().Uint64(), 10000}, nil
 }
 
 // The standard decoder accepts repeated keys; a policy document must not.

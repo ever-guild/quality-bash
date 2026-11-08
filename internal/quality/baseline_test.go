@@ -20,7 +20,7 @@ func TestRatios(t *testing.T) {
 	}
 }
 func TestIndependentGates(t *testing.T) {
-	base := Baseline{Schema: 1, Files: []string{"sample.sh"}, Coverage: Ratio{8, 10}, Mutation: Ratio{6, 10}}
+	base := Baseline{Method: validBaseline(t).Method, Files: []string{"sample.sh"}, Coverage: Ratio{8, 10}, Mutation: Ratio{6, 10}}
 	for _, coverage := range []Ratio{{7, 10}, {9, 10}} {
 		for _, mutation := range []Ratio{{5, 10}, {7, 10}} {
 			current := base
@@ -38,7 +38,7 @@ func TestIndependentGates(t *testing.T) {
 		t.Fatal("scope change accepted")
 	}
 	current = base
-	current.Method.Mutation = "new"
+	current.Method.Mutation.Algorithm = "new"
 	if base.Check(current) == nil {
 		t.Fatal("method change accepted")
 	}

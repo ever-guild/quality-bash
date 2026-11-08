@@ -41,7 +41,7 @@ func TestProjectCannotLowerBaselineDuringGate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			baseline := quality.Baseline{Schema: 1, Files: selection.Scripts, Method: settings.Method, Coverage: quality.Ratio{Numerator: 1, Denominator: 1}, Mutation: quality.Ratio{Numerator: 1, Denominator: 1}}
+			baseline := quality.Baseline{Files: selection.Scripts, Method: settings.Method, Coverage: quality.Ratio{Numerator: 1, Denominator: 1}, Mutation: quality.Ratio{Numerator: 1, Denominator: 1}}
 			if err := quality.WriteJSON(filepath.Join(root, "quality-baseline.json"), baseline); err != nil {
 				t.Fatal(err)
 			}
@@ -90,10 +90,12 @@ func TestBaselineCheckRejectsForgedMeasurement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	forged := quality.Measurement{Qualified: true, Fingerprint: fingerprint, Baseline: quality.Baseline{Schema: 1, Files: selection.Scripts, Method: settings.Method, Coverage: quality.Ratio{Numerator: 1, Denominator: 1}, Mutation: quality.Ratio{Numerator: 1, Denominator: 1}}}
+	forged := quality.Measurement{Qualified: true, Fingerprint: fingerprint, Baseline: quality.Baseline{Files: selection.Scripts, Method: settings.Method, Coverage: quality.Ratio{Numerator: 1, Denominator: 1}, Mutation: quality.Ratio{Numerator: 1, Denominator: 1}}}
 	if err := os.Mkdir(reports, 0700); err != nil {
 		t.Fatal(err)
 	}
+	forged.CoverageCounts = forged.Baseline.Coverage
+	forged.MutationCounts = forged.Baseline.Mutation
 	if err := quality.WriteJSON(filepath.Join(reports, "measurement.json"), forged); err != nil {
 		t.Fatal(err)
 	}

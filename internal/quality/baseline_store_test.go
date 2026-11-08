@@ -8,7 +8,9 @@ import (
 
 func TestBaselineUpdatePolicy(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "quality-baseline.json")
-	m := Measurement{Fingerprint: "current", Qualified: true, Baseline: Baseline{Schema: 1, Files: []string{"sample.sh"}, Coverage: Ratio{8, 10}, Mutation: Ratio{6, 10}}}
+	m := Measurement{Fingerprint: "current", Qualified: true, Baseline: Baseline{Method: validBaseline(t).Method, Files: []string{"sample.sh"}, Coverage: Ratio{8, 10}, Mutation: Ratio{6, 10}}}
+	m.CoverageCounts = m.Baseline.Coverage
+	m.MutationCounts = m.Baseline.Mutation
 	if UpdateBaseline(path, m, "current", false) == nil {
 		t.Fatal("implicit creation accepted")
 	}
@@ -16,7 +18,7 @@ func TestBaselineUpdatePolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	original, _ := os.ReadFile(path)
-	for _, kind := range []string{"stale", "coverage", "mutation", "method", "unqualified"} {
+	for _, kind := range []string{"stale", "coverage", "mutation", "method", "unqualified", "counts"} {
 		changed := m
 		fingerprint := "current"
 		switch kind {
@@ -27,9 +29,11 @@ func TestBaselineUpdatePolicy(t *testing.T) {
 		case "mutation":
 			changed.Baseline.Mutation = Ratio{5, 10}
 		case "method":
-			changed.Baseline.Method.Coverage = "different"
+			changed.Baseline.Method.Coverage.Algorithm = "different"
 		case "unqualified":
 			changed.Qualified = false
+		case "counts":
+			changed.MutationCounts = Ratio{1, 10}
 		}
 		if UpdateBaseline(path, changed, fingerprint, false) == nil {
 			t.Fatalf("accepted %s", kind)
@@ -40,6 +44,7 @@ func TestBaselineUpdatePolicy(t *testing.T) {
 		}
 	}
 	m.Baseline.Coverage = Ratio{9, 10}
+	m.CoverageCounts = m.Baseline.Coverage
 	if err := UpdateBaseline(path, m, "current", false); err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +56,9 @@ func TestConcurrentBaselineUpdateIsRejected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := Measurement{Fingerprint: "current", Qualified: true, Baseline: Baseline{Schema: 1, Files: []string{"a.sh"}, Coverage: Ratio{1, 2}, Mutation: Ratio{1, 2}}}
+	m := Measurement{Fingerprint: "current", Qualified: true, Baseline: Baseline{Method: validBaseline(t).Method, Files: []string{"a.sh"}, Coverage: Ratio{1, 2}, Mutation: Ratio{1, 2}}}
+	m.CoverageCounts = m.Baseline.Coverage
+	m.MutationCounts = m.Baseline.Mutation
 	if UpdateBaseline(path, m, "current", true) == nil {
 		t.Fatal("concurrent write accepted")
 	}

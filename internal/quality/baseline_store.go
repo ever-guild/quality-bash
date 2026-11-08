@@ -10,9 +10,11 @@ import (
 )
 
 type Measurement struct {
-	Fingerprint string   `json:"fingerprint"`
-	Baseline    Baseline `json:"baseline"`
-	Qualified   bool     `json:"qualified"`
+	CoverageCounts Ratio    `json:"coverageCounts"`
+	MutationCounts Ratio    `json:"mutationCounts"`
+	Fingerprint    string   `json:"fingerprint"`
+	Baseline       Baseline `json:"baseline"`
+	Qualified      bool     `json:"qualified"`
 }
 
 func ReadJSON(path string, target any) error {
@@ -76,13 +78,28 @@ func (m Measurement) ValidateFresh(fingerprint string) error {
 	if fingerprint == "" || m.Fingerprint != fingerprint {
 		return fmt.Errorf("stale report: sources, tests, helpers or settings changed; rerun measurements")
 	}
-	if (m.Baseline.Schema != 1 && m.Baseline.Schema != 2) || len(m.Baseline.Files) == 0 {
-		return fmt.Errorf("invalid report scope or schema")
+	if len(m.Baseline.Files) == 0 {
+		return fmt.Errorf("invalid report scope")
+	}
+	if err := m.CoverageCounts.Validate(); err != nil {
+		return err
 	}
 	if err := m.Baseline.Coverage.Validate(); err != nil {
 		return err
 	}
-	return m.Baseline.Mutation.Validate()
+	if err := m.Baseline.Mutation.Validate(); err != nil {
+		return err
+	}
+	if m.CoverageCounts.scoreHundredths() != m.Baseline.Coverage.scoreHundredths() {
+		return fmt.Errorf("coverage counts differ from baseline percentage")
+	}
+	if err := m.MutationCounts.Validate(); err != nil {
+		return err
+	}
+	if m.MutationCounts.scoreHundredths() != m.Baseline.Mutation.scoreHundredths() {
+		return fmt.Errorf("mutation counts do not match baseline score")
+	}
+	return nil
 }
 func UpdateBaseline(path string, m Measurement, fingerprint string, create bool) error {
 	if err := m.ValidateFresh(fingerprint); err != nil {
@@ -120,9 +137,6 @@ func UpdateBaseline(path string, m Measurement, fingerprint string, create bool)
 	}
 	if create {
 		return fmt.Errorf("baseline already exists; omit --create")
-	}
-	if previous.Schema == 1 && m.Baseline.Schema == 2 {
-		return fmt.Errorf("baseline schema v1: run baseline update --upgrade-schema first")
 	}
 	if err = previous.Check(m.Baseline); err != nil {
 		return err

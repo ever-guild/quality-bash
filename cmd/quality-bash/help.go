@@ -12,7 +12,7 @@ Commands:
   mutation         Run AST mutation tests
   qa               Run all checks and enforce the baseline
   baseline check   Run fresh checks and enforce the baseline
-  baseline update  Save fresh qualified results without lowering thresholds
+  baseline-update  Save fresh qualified results without lowering thresholds
 
 Common options:
   --root PATH      Project directory (default .)
@@ -35,5 +35,5 @@ var commandHelp = map[string]string{
 	"mutation":        "Run original tests, then isolated AST mutants; timeouts and infrastructure errors fail the check.",
 	"qa":              "Run lint, tests, coverage and mutation testing, then enforce the baseline without modifying it.",
 	"baseline check":  "Run fresh quality checks and enforce the working and optional target-revision baselines.",
-	"baseline update": "Save fresh qualified measurements. Use --create for the first baseline, --upgrade-schema for lossless v1 to v2 conversion, or --migrate REASON for an incompatible methodology. Compatible thresholds cannot decrease.",
+	"baseline-update": "Save fresh qualified measurements. Use --create for the first baseline or --migrate REASON for an incompatible methodology. Compatible thresholds cannot decrease.",
 }

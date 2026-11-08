@@ -19,7 +19,7 @@ func TestTargetBaseline(t *testing.T) {
 		}
 	}
 	git("init", "--quiet")
-	baseline := Baseline{Schema: 1, Files: []string{"script.sh"}, Coverage: Ratio{8, 10}, Mutation: Ratio{6, 10}}
+	baseline := Baseline{Method: validBaseline(t).Method, Files: []string{"script.sh"}, Coverage: Ratio{8, 10}, Mutation: Ratio{6, 10}}
 	path := filepath.Join(root, "quality-baseline.json")
 	if err := WriteJSON(path, baseline); err != nil {
 		t.Fatal(err)

@@ -24,9 +24,9 @@ func (r Runner) Settings(ctx context.Context, s Selection, jobs int) (Settings, 
 		tools[tool.Name] = tool.Version
 	}
 	return Settings{Selection: s, Jobs: jobs, Timeout: r.Timeout.String(), Method: Method{
-		Coverage: "kcov-ps4-cobertura-lines-v1", Tools: tools, Mutation: MutationMethod,
-		Operators:  []string{"condition", "arithmetic", "return-code"},
-		Parameters: map[string]string{"parser": "mvdan.cc/sh/v3@v3.12.0"},
+		Coverage: CoverageMethod{Algorithm: "kcov-ps4-cobertura-lines-v1"}, Tools: tools, Mutation: MutationMethodSettings{Algorithm: MutationMethod,
+			Operators: []string{"condition", "arithmetic", "return-code"},
+			Parser:    Parser{Name: "mvdan.cc/sh/v3", Version: "v3.12.0"}},
 	}}, nil
 }
 func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath string) (Measurement, error) {
@@ -38,7 +38,7 @@ func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath
 		return m, err
 	}
 	// A failed new run must not leave an earlier report eligible for updates.
-	if err := WriteJSON(filepath.Join(r.Reports, "measurement.json"), m); err != nil {
+	if err := WriteJSON(filepath.Join(r.Reports, "measurement.json"), map[string]bool{"qualified": false}); err != nil {
 		return m, err
 	}
 	settings, err := r.Settings(ctx, s, jobs)
@@ -71,7 +71,7 @@ func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath
 	if before != after {
 		return m, fmt.Errorf("project changed during measurement; report cannot qualify")
 	}
-	m = Measurement{Fingerprint: after, Qualified: true, Baseline: Baseline{Schema: 2, Files: s.Scripts, Method: settings.Method, Coverage: coverage.Score, Mutation: mutation.Score}}
+	m = Measurement{CoverageCounts: coverage.Score, MutationCounts: mutation.Score, Fingerprint: after, Qualified: true, Baseline: Baseline{Files: s.Scripts, Method: settings.Method, Coverage: coverage.Score, Mutation: mutation.Score}}
 	if err = WriteJSON(filepath.Join(r.Reports, "measurement.json"), m); err != nil {
 		return m, err
 	}

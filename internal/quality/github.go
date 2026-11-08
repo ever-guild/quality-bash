@@ -7,8 +7,8 @@ import (
 
 // PublishGitHub writes only fixed keys and numeric values to runner-owned files.
 func PublishGitHub(m Measurement, passed bool) error {
-	values := fmt.Sprintf("coverage_numerator=%d\ncoverage_denominator=%d\nmutation_numerator=%d\nmutation_denominator=%d\npassed=%t\n", m.Baseline.Coverage.Numerator, m.Baseline.Coverage.Denominator, m.Baseline.Mutation.Numerator, m.Baseline.Mutation.Denominator, passed)
-	summary := fmt.Sprintf("### quality-bash\n\n| Metric | Count |\n|---|---:|\n| Coverage | %d/%d |\n| Mutations detected | %d/%d |\n\nQuality gate passed: **%t**\n", m.Baseline.Coverage.Numerator, m.Baseline.Coverage.Denominator, m.Baseline.Mutation.Numerator, m.Baseline.Mutation.Denominator, passed)
+	values := fmt.Sprintf("coverage_numerator=%d\ncoverage_denominator=%d\nmutation_numerator=%d\nmutation_denominator=%d\npassed=%t\n", m.CoverageCounts.Numerator, m.CoverageCounts.Denominator, m.MutationCounts.Numerator, m.MutationCounts.Denominator, passed)
+	summary := fmt.Sprintf("### quality-bash\n\n| Metric | Count |\n|---|---:|\n| Coverage | %d/%d |\n| Mutations detected | %d/%d |\n\nQuality gate passed: **%t**\n", m.CoverageCounts.Numerator, m.CoverageCounts.Denominator, m.MutationCounts.Numerator, m.MutationCounts.Denominator, passed)
 	if !m.Qualified {
 		values = "passed=false\n"
 		summary = "### quality-bash\n\nQuality gate passed: **false**\n\nNo qualified measurement is available. See the command diagnostics and uploaded reports.\n"

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	qualitybash "github.com/ever-guild/quality-bash"
 	"github.com/ever-guild/quality-bash/internal/install"
 	"github.com/ever-guild/quality-bash/internal/quality"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"time"
 )
 
-var version = "v1.0.0-alpha.2-dev"
+var version = qualitybash.Version + "-dev"
 
 type paths []string
 
@@ -38,7 +39,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 			fmt.Println("Usage: quality-bash tools install [options]\nInstall the pinned tools explicitly. Use tools install --help for options.")
 			return nil
 		case "baseline":
-			fmt.Println("Usage: quality-bash baseline <check|update> [options]\ncheck runs fresh checks; update saves qualified results. Use the subcommand's --help for options.")
+			fmt.Println("Usage: quality-bash baseline check [options]\nRun fresh checks. Use baseline-update to save qualified results. Use the subcommand's --help for options.")
 			return nil
 		}
 	}
@@ -60,8 +61,8 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	}
 	toolsManifest := flags.String("tools-manifest", "", "pinned tool manifest (development packaging)")
 	if command == "baseline" {
-		if len(args) < 2 || (args[1] != "check" && args[1] != "update") {
-			return fmt.Errorf("usage: baseline <check|update> [options]")
+		if len(args) < 2 || args[1] != "check" {
+			return fmt.Errorf("usage: baseline check [options]")
 		}
 		command += " " + args[1]
 		args = append([]string{command}, args[2:]...)
@@ -77,8 +78,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	baseline := flags.String("baseline", "quality-baseline.json", "baseline path relative to root")
 	baseRevision := flags.String("base-revision", "", "also enforce baseline from this Git revision")
 	create := flags.Bool("create", false, "explicitly create first baseline")
-	migrate := flags.String("migrate", "", "explicit baseline migration explanation (baseline update only)")
-	upgrade := flags.Bool("upgrade-schema", false, "convert baseline v1 to v2 without changing thresholds or running tools")
+	migrate := flags.String("migrate", "", "explicit baseline migration explanation (baseline-update only)")
 	root := flags.String("root", ".", "project root")
 	reports := flags.String("reports", "quality-reports", "diagnostics directory relative to root")
 	timeout := flags.Duration("timeout", 5*time.Minute, "timeout per external process")
@@ -101,21 +101,11 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	if *jobs < 1 {
 		return fmt.Errorf("jobs must be positive")
 	}
-	if (*create || *migrate != "" || *upgrade) && command != "baseline update" {
-		return fmt.Errorf("--create, --migrate and --upgrade-schema require baseline update")
-	}
-	if *upgrade {
-		if *create || *migrate != "" || *baseRevision != "" {
-			return fmt.Errorf("--upgrade-schema cannot be combined with --create, --migrate or --base-revision")
-		}
-		path := *baseline
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(*root, path)
-		}
-		return quality.UpgradeBaseline(path)
+	if (*create || *migrate != "") && command != "baseline-update" {
+		return fmt.Errorf("--create and --migrate require baseline-update")
 	}
 	// Reject invalid policy documents before looking up or executing tools.
-	if command == "qa" || command == "baseline check" || command == "baseline update" {
+	if command == "qa" || command == "baseline check" || command == "baseline-update" {
 		path := *baseline
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(*root, path)
@@ -138,6 +128,9 @@ func run(ctx context.Context, args []string) (returnErr error) {
 			}
 		}
 	}
+	if err := quality.CheckBash(ctx, *timeout); err != nil {
+		return err
+	}
 	if command == "tools install" || *toolsManifest != "" || len(install.BundledManifest) != 0 {
 		data := install.BundledManifest
 		if *toolsManifest != "" {
@@ -151,6 +144,10 @@ func run(ctx context.Context, args []string) (returnErr error) {
 			return fmt.Errorf("release tool manifest is not yet bundled; development builds require --tools-manifest")
 		}
 		manifest, manifestErr := install.ParseManifest(data)
+		if manifestErr != nil {
+			return manifestErr
+		}
+		manifest, manifestErr = install.PreferSystemKcov(ctx, manifest)
 		if manifestErr != nil {
 			return manifestErr
 		}
@@ -194,7 +191,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	if !filepath.IsAbs(reportPath) {
 		reportPath = filepath.Join(absRoot, reportPath)
 	}
-	if command != "lint" && command != "test" && command != "mutation" && command != "coverage" && command != "qa" && command != "baseline check" && command != "baseline update" {
+	if command != "lint" && command != "test" && command != "mutation" && command != "coverage" && command != "qa" && command != "baseline check" && command != "baseline-update" {
 		return fmt.Errorf("command %q is not yet implemented", args[0])
 	}
 	selection, err := quality.Discover(absRoot, scripts, tests)
@@ -216,7 +213,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 		}
 		return err
 	}
-	if command == "qa" || command == "baseline check" || command == "baseline update" {
+	if command == "qa" || command == "baseline check" || command == "baseline-update" {
 		var measurement quality.Measurement
 		defer func() {
 			if publishErr := quality.PublishGitHub(measurement, returnErr == nil); publishErr != nil && returnErr == nil {
@@ -226,7 +223,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 		// Freeze policy before any project-controlled test can modify its files.
 		var previous, target quality.Baseline
 		var previousErr error
-		if command != "baseline update" {
+		if command != "baseline-update" {
 			previousErr = quality.ReadJSON(baselinePath, &previous)
 		}
 		if *baseRevision != "" {
@@ -243,7 +240,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 		if err != nil {
 			return err
 		}
-		if command == "baseline update" {
+		if command == "baseline-update" {
 			if *migrate != "" {
 				if *create || *baseRevision != "" {
 					return fmt.Errorf("migration cannot be combined with --create or --base-revision; target comparisons remain incompatible until migration is accepted")
