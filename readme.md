@@ -43,12 +43,10 @@ The repository's [example](https://github.com/ever-guild/quality-bash/tree/v1.0.
 
 ```sh
 make -C example quality-bash-install
-make -C example quality-bash-qa
+make -C example quality-bash
 ```
 
-Copy `example/makefile` into your project for the same commands. On a new project, run `quality-bash-qa` to measure, then `make quality-bash-baseline-update ARGS=--create`; use `quality-bash-baseline-update` after improvements. `ARGS='--jobs 2'` passes CLI options. `quality-bash-lint` runs lint; automatic fixing is not supported. The make targets bootstrap a missing CLI; direct CLI checks never install tools.
-
-Copy [example/.github/workflows/qa.yml](https://github.com/ever-guild/quality-bash/blob/v1.0.0-alpha.4/example/.github/workflows/qa.yml) to `.github/workflows/qa.yml` alongside the makefile for CI driven by `make`, including PR target-baseline checks.
+Copy `example/makefile` into your project for the same commands. On a new project, run `make quality-bash` to measure, use `make quality-bash-fix` after improvements. `ARGS='--jobs 2'` passes CLI options. The make targets bootstrap a missing CLI, direct CLI checks never install tools.
 
 ## Baseline
 

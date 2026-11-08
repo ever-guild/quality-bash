@@ -9,7 +9,7 @@ make check                       # race tests, vet, build
 make ci-deps                     # download pinned ready tools; no sudo
 make integration                 # real tool tests; inspect skips
 make version
-make -C example quality-bash-qa QUALITY_BASH="$PWD/quality-bash"
+make -C example quality-bash
 ```
 
 `GO` selects the Go executable. `make integration` uses the verified tool cache, requires doctor to pass and fails on any skipped test.

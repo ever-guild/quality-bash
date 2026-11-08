@@ -10,7 +10,7 @@
 
 - Group coverage and mutation methodology settings; validate the complete baseline offline with JSON Schema.
 - Download upstream Bats 1.14.0 and ShellCheck 0.11.0; reuse PATH kcov or unpack Debian kcov 43 with shared libraries without sudo. Stop building and publishing third-party tool archives.
-- Rename `baseline update` to `baseline-update`; add `quality-bash-baseline-update` to the minimal makefile example.
+- Rename `baseline update` to `baseline-update`; add `quality-bash-fix` to the minimal makefile example.
 
 - Use system Bash >= 5.2; check its version before installing managed tools. Bash is no longer downloaded or added from the managed cache.
 

@@ -30,7 +30,7 @@ ci-deps: build
 	./quality-bash doctor
 
 check-example: build
-	$(MAKE) -C example quality-bash-qa QUALITY_BASH="$(CURDIR)/quality-bash"
+	$(MAKE) -C example quality-bash QUALITY_BASH="$(CURDIR)/quality-bash"
 
 release:
 	$(GO) run ./cmd/package-release --version v1.0.0-alpha.4 --output "$$RELEASE_DIST"
@@ -65,5 +65,4 @@ smoke-example:
 	directory=$$(mktemp -d "$$RUNNER_TEMP/quality-bash-example.XXXXXXXX"); \
 	trap 'rm -rf -- "$$directory"' EXIT; \
 	export XDG_BIN_HOME="$$directory/bin" XDG_CACHE_HOME="$$directory/cache"; \
-	$(MAKE) -C example quality-bash-install; \
-	$(MAKE) -C example quality-bash-qa
+	$(MAKE) -C example quality-bash
