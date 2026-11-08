@@ -8,9 +8,10 @@ import (
 )
 
 type Settings struct {
-	Selection Selection `json:"selection"`
-	Method    Method    `json:"method"`
-	Timeout   string    `json:"timeout"`
+	Selection         Selection `json:"selection"`
+	Method            Method    `json:"method"`
+	Timeout           string    `json:"timeout"`
+	MutationExecution string    `json:"mutationExecution"`
 }
 
 func (r Runner) Settings(ctx context.Context, s Selection) (Settings, error) {
@@ -22,7 +23,7 @@ func (r Runner) Settings(ctx context.Context, s Selection) (Settings, error) {
 	for _, tool := range versions {
 		tools[tool.Name] = tool.Version
 	}
-	return Settings{Selection: s, Timeout: r.Timeout.String(), Method: Method{
+	return Settings{MutationExecution: "bats-abort-v1", Selection: s, Timeout: r.Timeout.String(), Method: Method{
 		Coverage: CoverageMethod{Algorithm: "kcov-ps4-cobertura-lines-v1"}, Tools: tools, Mutation: MutationMethodSettings{Algorithm: MutationMethod,
 			Operators: []string{"condition", "arithmetic", "return-code"},
 			Parser:    Parser{Name: "mvdan.cc/sh/v3", Version: "v3.12.0"}},

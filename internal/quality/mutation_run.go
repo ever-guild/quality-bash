@@ -192,7 +192,7 @@ func (r Runner) runMutant(ctx context.Context, s Selection, m Mutation, excluded
 	if syntax.ExitCode != 0 {
 		return "invalid"
 	}
-	args := []string{"--formatter", "tap"}
+	args := []string{"--abort", "--formatter", "tap"}
 	for _, test := range s.Tests {
 		args = append(args, filepath.Join(dir, test))
 	}
@@ -211,7 +211,7 @@ func (r Runner) runMutant(ctx context.Context, s Selection, m Mutation, excluded
 	if err != nil {
 		return "infrastructure-error"
 	}
-	_, tapErr := ValidateTAP(tap, result.ExitCode)
+	_, tapErr := validateTAP(tap, result.ExitCode, true)
 	tap.Close()
 	if tapErr != nil {
 		return "infrastructure-error"
