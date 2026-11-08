@@ -8,7 +8,7 @@ Linux amd64/arm64; Ubuntu 24.04 is tested. Install the newest published CLI and 
 
 ```sh
 curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-  https://raw.githubusercontent.com/ever-guild/quality-bash/68df4ac53a13a8ec44d2cd20ba9b830751aad615/install.sh -o install.sh
+  https://raw.githubusercontent.com/ever-guild/quality-bash/main/install.sh -o install.sh
 bash install.sh
 export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
 quality-bash --help
