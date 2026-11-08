@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.0-alpha.3
+
+- Group coverage and mutation methodology settings; validate the complete baseline offline with JSON Schema.
+- Download upstream Bats 1.14.0 and ShellCheck 0.11.0; reuse PATH kcov or unpack Debian kcov 43 with shared libraries without sudo. Stop building and publishing third-party tool archives.
+- Rename `baseline update` to `baseline-update`; add `quality-bash-baseline-update` to the minimal makefile example.
+
+- Use system Bash >= 5.2; check its version before installing managed tools. Bash is no longer downloaded or added from the managed cache.
+
+- `install.sh` selects the newest published CLI, verifies the release asset SHA-256, installs managed tools and runs doctor. Requires jq; download, installation or verification errors fail the command.
+
+- Baselines use only the required `$schema` URL; the schema lives at `baseline.schema.json` in the repository and CLI archive.
+- `mutation.score` replaces killed/survived counts in baselines: a percentage rounded half up to two decimal places for storage and comparison. `coverage.linePercent` uses the same rounding policy. Reports and Action outputs retain exact counts.
+- Remove old alpha baseline readers and `--upgrade-schema`. Recreate old baselines from fresh measurements and review their thresholds.
+
 ## v1.0.0-alpha.2
 
 - `install.sh` installs the pinned Linux CLI with SHA-256 verification; the runnable make example includes explicit installation, lint, QA and baseline targets.

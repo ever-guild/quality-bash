@@ -9,9 +9,8 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
+	qualitybash "github.com/ever-guild/quality-bash"
 	"github.com/ever-guild/quality-bash/internal/install"
-	"github.com/ever-guild/quality-bash/internal/quality"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,10 +27,9 @@ func main() {
 }
 func run() error {
 	output := flag.String("output", "dist", "artifact directory")
-	version := flag.String("version", "dev", "dev or v1.0.0-alpha.2")
-	toolsDirectory := flag.String("tools", "", "optional directory containing the eight pinned tool archives")
+	version := flag.String("version", "dev", "dev or "+qualitybash.Version)
 	flag.Parse()
-	if *version != "dev" && *version != "v1.0.0-alpha.2" {
+	if *version != "dev" && *version != qualitybash.Version {
 		return fmt.Errorf("unsupported release version")
 	}
 	if *version != "dev" {
@@ -68,7 +66,7 @@ func run() error {
 		return err
 	}
 	extra := map[string][]byte{}
-	for _, name := range []string{"develop.md", "changelog.md", "licenses/jsonschema.txt", "licenses/x-text.txt"} {
+	for _, name := range []string{"develop.md", "changelog.md", "licenses/jsonschema.txt", "licenses/x-text.txt", "licenses/xz.txt"} {
 		data, err := os.ReadFile(name)
 		if err != nil {
 			return err
@@ -80,7 +78,7 @@ func run() error {
 		binary := filepath.Join(temp, "quality-bash-"+arch)
 		buildVersion := *version
 		if buildVersion == "dev" {
-			buildVersion = "v1.0.0-alpha.2-dev"
+			buildVersion = qualitybash.Version + "-dev"
 		}
 		cmd := exec.Command("go", "build", "-buildvcs=false", "-trimpath", "-ldflags=-s -w -X main.version="+buildVersion, "-o", binary, "./cmd/quality-bash")
 		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH="+arch, "CGO_ENABLED=0")
@@ -98,7 +96,7 @@ func run() error {
 		files["LICENSE"] = projectLicense
 		files["readme.md"] = readme
 		files["contributing.md"] = contributing
-		files["internal/quality/schema/baseline-v2.schema.json"] = quality.BaselineSchema
+		files["baseline.schema.json"] = qualitybash.BaselineSchema
 		for name, content := range extra {
 			files[name] = content
 		}
@@ -116,50 +114,9 @@ func run() error {
 		}
 		fmt.Fprintf(&checksums, "%x  %s\n", sha256.Sum256(archive), name)
 	}
-	if *toolsDirectory != "" {
-		manifest, err := install.ParseManifest(install.BundledManifest)
-		if err != nil {
-			return err
-		}
-		for _, pkg := range manifest.Packages {
-			name := pkg.Name + "-" + pkg.OS + "-" + pkg.Arch + ".tar.gz"
-			if err := copyVerifiedArchive(filepath.Join(*toolsDirectory, name), filepath.Join(*output, name), pkg.SHA256); err != nil {
-				return err
-			}
-			fmt.Fprintf(&checksums, "%s  %s\n", pkg.SHA256, name)
-		}
-	}
 	return os.WriteFile(filepath.Join(*output, "SHA256SUMS"), checksums.Bytes(), 0644)
 }
 
-func copyVerifiedArchive(source, destination, expected string) error {
-	input, err := os.Open(source)
-	if err != nil {
-		return err
-	}
-	defer input.Close()
-	output, err := os.CreateTemp(filepath.Dir(destination), ".archive-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(output.Name())
-	hash := sha256.New()
-	_, copyErr := io.Copy(io.MultiWriter(output, hash), input)
-	closeErr := output.Close()
-	if copyErr != nil {
-		return copyErr
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if fmt.Sprintf("%x", hash.Sum(nil)) != expected {
-		return fmt.Errorf("tool archive checksum mismatch: %s", source)
-	}
-	if err := os.Chmod(output.Name(), 0644); err != nil {
-		return err
-	}
-	return os.Rename(output.Name(), destination)
-}
 func pack(files map[string][]byte) ([]byte, error) {
 	var buffer bytes.Buffer
 	gz := gzip.NewWriter(&buffer)

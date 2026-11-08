@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
       - name: Run published Action
         id: quality
-        uses: ever-guild/quality-bash@v1.0.0-alpha.2
+        uses: ever-guild/quality-bash@v1.0.0-alpha.3
         with:
           root: testdata/basic
           jobs: '2'

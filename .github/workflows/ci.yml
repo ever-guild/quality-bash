@@ -1,6 +1,7 @@
 name: Go checks
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -20,23 +21,15 @@ jobs:
           cache: true
       - name: Test Go infrastructure
         run: make test
-      - name: Install build dependencies and test tools
+      - name: Install ready upstream tools
         run: make ci-deps
-      - name: Build pinned kcov
-        run: make kcov
       - name: Run all integration tests
         run: make integration
-      - name: Package external tools
-        run: make bundle-tools
-      - name: Verify packaged tools
-        run: make verify-tools
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: tools-${{ runner.arch }}
-          path: tool-dist/
       - name: Vet
         run: make vet
       - name: Build CLI
         run: make build
+      - name: Run the minimal example
+        run: make check-example
       - name: Check version
         run: make version

@@ -3,12 +3,10 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := check
 
 GO ?= go
-KCOV_PREFIX ?= $(if $(RUNNER_TEMP),$(RUNNER_TEMP)/kcov,$(CURDIR)/.build/kcov)
-TOOL_DIST ?= tool-dist
 RELEASE_DIST ?= dist
-export KCOV_PREFIX TOOL_DIST RELEASE_DIST
+export RELEASE_DIST
 
-.PHONY: check test integration vet build version ci-deps kcov bundle-tools verify-tools release smoke-metrics smoke-cli smoke-compare smoke-example
+.PHONY: check test integration vet build version ci-deps check-example release smoke-metrics smoke-cli smoke-compare smoke-example
 
 check: test vet build
 
@@ -16,7 +14,7 @@ test:
 	$(GO) test -race ./...
 
 integration:
-	PATH="$$KCOV_PREFIX/bin:$$PATH" $(GO) test -race -count=1 -v ./...
+	$(GO) run ./cmd/integration
 
 vet:
 	$(GO) vet ./...
@@ -27,21 +25,15 @@ build:
 version:
 	./quality-bash version
 
-ci-deps:
-	sudo apt-get update -qq
-	sudo apt-get install -y --no-install-recommends cmake g++ make python3 libcurl4-openssl-dev libdw-dev libelf-dev binutils-dev zlib1g-dev libssl-dev bats shellcheck
+ci-deps: build
+	./quality-bash tools install
+	./quality-bash doctor
 
-kcov:
-	$(GO) run ./cmd/build-kcov --prefix "$$KCOV_PREFIX"
-
-bundle-tools:
-	$(GO) run ./cmd/bundle-tools --kcov "$$KCOV_PREFIX/bin/kcov" --output "$$TOOL_DIST"
-
-verify-tools:
-	$(GO) run ./cmd/check-tool-bundles --directory "$$TOOL_DIST"
+check-example: build
+	$(MAKE) -C example quality-bash-qa QUALITY_BASH="$(CURDIR)/quality-bash" ARGS='--jobs 2'
 
 release:
-	$(GO) run ./cmd/package-release --version v1.0.0-alpha.2 --tools "$$TOOL_DIST" --output "$$RELEASE_DIST"
+	$(GO) run ./cmd/package-release --version v1.0.0-alpha.3 --output "$$RELEASE_DIST"
 
 smoke-metrics:
 	test "$$COVERED/$$LINES" = '3/5'
@@ -50,15 +42,15 @@ smoke-metrics:
 
 smoke-cli:
 	case "$$RUNNER_ARCH_VALUE" in \
-	  X64) arch=amd64; digest=dd6ed1b1b2c6009ebbdd5e14b5f1c22b0e010d37cd25c194987df118f3df6c49 ;; \
-	  ARM64) arch=arm64; digest=ff3f5c1e1feafcee3f291a8869a6ddaeb82a8bfb3694912d34b773e62f9b5242 ;; \
+	  X64) arch=amd64; digest=591072b44b22690bdd459edf496e882326e47d7b532222f472da0f719b62af38 ;; \
+	  ARM64) arch=arm64; digest=f152ff01a20a2c2a4b08b1dad77efcbc7d2bc9bba59b13b809a81b8c23db8b66 ;; \
 	  *) exit 1 ;; \
 	esac; \
 	directory=$$(mktemp -d "$$RUNNER_TEMP/quality-bash-local.XXXXXXXX"); \
 	trap 'rm -rf -- "$$directory"' EXIT; \
 	export XDG_CACHE_HOME="$$directory/cache"; \
-	release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.2; \
-	asset="quality-bash-v1.0.0-alpha.2-linux-$$arch.tar.gz"; \
+	release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.3; \
+	asset="quality-bash-v1.0.0-alpha.3-linux-$$arch.tar.gz"; \
 	curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$$release/$$asset" -o "$$directory/$$asset"; \
 	(cd "$$directory"; printf '%s  %s\n' "$$digest" "$$asset" > selected.sha256; sha256sum --check selected.sha256; tar -xzf "$$asset"); \
 	"$$directory/quality-bash" version; \
@@ -74,5 +66,4 @@ smoke-example:
 	trap 'rm -rf -- "$$directory"' EXIT; \
 	export XDG_BIN_HOME="$$directory/bin" XDG_CACHE_HOME="$$directory/cache"; \
 	$(MAKE) -C example quality-bash-install; \
-	$(MAKE) -C example quality-bash-tools; \
-	$(MAKE) -C example quality-bash-check ARGS='--jobs 2'
+	$(MAKE) -C example quality-bash-qa ARGS='--jobs 2'
