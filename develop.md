@@ -20,12 +20,12 @@ make -C example quality-bash-qa QUALITY_BASH="$PWD/quality-bash"
 | --- | --- |
 | `cmd/quality-bash` | CLI and help |
 | `internal/quality` | Checks, measurements, gates, baseline migration |
-| `baseline.schema.json`, `schema.go` | Embedded JSON Schema and version; keep fixtures valid |
+| `baseline.schema.json`, `schema.go` | Embedded JSON Schema and CLI version; change the schema URL only for format changes |
 | `internal/install` | Downloads, archive validation, pinned tool manifest |
 | `cmd/package-release` | Reproducible CLI archives |
 | `testdata/basic` | Known coverage 3/5 and mutation score 2/3 |
 
-Own logic and tests are Go. Shell fixtures are inputs; `install.sh` selects the newest published CLI, verifies its archive, and delegates tool installation and verification to `tools install` and `doctor`. Workflow `run` steps call only `makefile` targets. Keep execution settings in report fingerprints; changing a gate's methodology must remain explicit. See [contribution workflow](contributing.md) for human and agent changes.
+Own logic and tests are Go. Shell fixtures are inputs; `install.sh` selects the newest published CLI, verifies its archive, and delegates tool installation and verification to `tools install` and `doctor`. Workflow `run` steps call only `makefile` targets. Keep semantic execution settings (including timeout, excluding jobs) in report fingerprints; changing a gate's methodology must remain explicit. See [contribution workflow](contributing.md) for human and agent changes.
 
 ## Package and release
 

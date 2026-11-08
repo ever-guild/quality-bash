@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.0-alpha.4
+
+- Default CLI and Action mutation parallelism to `jobs: auto`; use Go runtime CPU/container settings and cap workers at the mutant count. Explicit positive worker counts remain supported.
+- Exclude jobs from measurement freshness; `baseline-update` no longer needs the measurement’s worker setting. Rerun `qa` once after upgrading to refresh old reports; alpha.3 baselines remain valid.
+- Add a minimal `make`-driven workflow template in `example/.github/workflows/qa.yml`.
+
 ## v1.0.0-alpha.3
 
 - Group coverage and mutation methodology settings; validate the complete baseline offline with JSON Schema.

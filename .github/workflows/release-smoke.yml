@@ -16,10 +16,9 @@ jobs:
           fetch-depth: 0
       - name: Run published Action
         id: quality
-        uses: ever-guild/quality-bash@v1.0.0-alpha.3
+        uses: ever-guild/quality-bash@v1.0.0-alpha.4
         with:
           root: testdata/basic
-          jobs: '2'
           base-revision: ''
       - name: Check expected fixture metrics
         env:

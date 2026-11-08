@@ -23,8 +23,8 @@ inputs:
     description: Target Git revision whose baseline must also pass
     default: ${{ github.event.pull_request.base.sha }}
   jobs:
-    description: Parallel mutation workers
-    default: '1'
+    description: Parallel mutation workers (auto or a positive integer)
+    default: auto
   timeout:
     description: Timeout per external process
     default: 5m
@@ -83,15 +83,15 @@ runs:
         RUNNER_ARCH_VALUE: ${{ runner.arch }}
       run: |
         case "$RUNNER_ARCH_VALUE" in
-          X64) arch=amd64; digest=050ec74d53326674b02e209e52f1386d3adf85ac21013ddd57e169b334e9c87c ;;
-          ARM64) arch=arm64; digest=118d2896d827eae3266bb6fb971197a67fe099dfcfc12a8d7684455362364074 ;;
+          X64) arch=amd64; digest=7bc8d5428fd0b86e92d92f101b12e0a1997ef2624726cb2ca361777b463f92f1 ;;
+          ARM64) arch=arm64; digest=94fb072a6e7b9ee3035a6f3a26e8f0265f8ef4f3f4be126d0977445688ff5d2a ;;
           *) echo 'Unsupported runner architecture' >&2; exit 1 ;;
         esac
         directory=$(mktemp -d "$RUNNER_TEMP/quality-bash.XXXXXXXX")
         echo "artifact=${directory##*/}" >> "$GITHUB_OUTPUT"
         echo "cache=$directory/cache" >> "$GITHUB_OUTPUT"
-        release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.3
-        asset="quality-bash-v1.0.0-alpha.3-linux-$arch.tar.gz"
+        release=https://github.com/ever-guild/quality-bash/releases/download/v1.0.0-alpha.4
+        asset="quality-bash-v1.0.0-alpha.4-linux-$arch.tar.gz"
         curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$release/$asset" -o "$directory/$asset"
         cd "$directory"
         printf '%s  %s\n' "$digest" "$asset" > selected.sha256

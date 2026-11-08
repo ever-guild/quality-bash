@@ -31,13 +31,15 @@ quality-bash baseline-update --root /path/to/project --create
 quality-bash qa --root /path/to/project
 ```
 
-Commit `quality-baseline.json`. `qa` and `baseline check` run fresh checks without changing it. Use `baseline-update` after an improvement; neither threshold can decrease. Use identical root, reports, jobs and timeout settings when measuring and updating.
+Commit `quality-baseline.json`. `qa` and `baseline check` run fresh checks without changing it. Use `baseline-update` after an improvement; neither threshold can decrease. Use identical root, reports and timeout settings when measuring and updating.
 
 Run individual checks with `lint`, `test`, `coverage` or `mutation`. Repeat `--script` and `--test` for explicit paths relative to `--root`; all selected tests run against each mutant. Other options: `--reports`, `--baseline`, `--jobs`, `--timeout`, `--base-revision <commit>`. Diagnostics, HTML, Cobertura and JSON reports default to `quality-reports/`.
 
+`--jobs auto` is the default: mutation workers use Go’s current [`GOMAXPROCS`](https://pkg.go.dev/runtime#GOMAXPROCS), whose defaults account for CPU affinity and container quotas, capped at the number of mutants. Go may use two workers even with a quota below two CPUs; use `--jobs 1` for strict serial execution. `--jobs N` overrides auto. Lint, normal tests and coverage remain sequential; changing jobs does not invalidate measurements.
+
 ## Make example
 
-The repository's [example](https://github.com/ever-guild/quality-bash/tree/v1.0.0-alpha.3/example) includes a script, test and baseline:
+The repository's [example](https://github.com/ever-guild/quality-bash/tree/v1.0.0-alpha.4/example) includes a script, test and baseline:
 
 ```sh
 make -C example quality-bash-install
@@ -45,6 +47,8 @@ make -C example quality-bash-qa
 ```
 
 Copy `example/makefile` into your project for the same commands. On a new project, run `quality-bash-qa` to measure, then `make quality-bash-baseline-update ARGS=--create`; use `quality-bash-baseline-update` after improvements. `ARGS='--jobs 2'` passes CLI options. `quality-bash-lint` runs lint; automatic fixing is not supported. The make targets bootstrap a missing CLI; direct CLI checks never install tools.
+
+Copy [example/.github/workflows/qa.yml](https://github.com/ever-guild/quality-bash/blob/v1.0.0-alpha.4/example/.github/workflows/qa.yml) to `.github/workflows/qa.yml` alongside the makefile for CI driven by `make`, including PR target-baseline checks.
 
 ## Baseline
 
@@ -54,7 +58,7 @@ The baseline format uses only `$schema`, pointing to `https://raw.githubusercont
 
 `method.coverage.algorithm` identifies the collector. `method.mutation` groups the algorithm, operators and parser. `method.tools` records exact tool versions. These fields are generated automatically; changing them requires an explicit methodology migration.
 
-Old alpha formats are not supported. To adopt this format, move the old baseline outside the project, run fresh `qa` measurements, then `baseline-update --create` with identical settings. Review the new thresholds before committing. Target-revision checks also require the current format.
+The format is unchanged from alpha.3, so its schema URL and baselines remain valid in alpha.4. Older formats are not supported. To adopt this format, move the old baseline outside the project, run fresh `qa` measurements, then `baseline-update --create` with identical settings. Review the new thresholds before committing. Target-revision checks also require the current format.
 
 Scope and methodology must match. Changing them requires fresh measurements and `baseline-update --migrate 'reason'`; compatible thresholds cannot use migration to decrease.
 
@@ -64,7 +68,7 @@ Scope and methodology must match. Changing them requires fresh measurements and 
 - uses: actions/checkout@v7
   with:
     fetch-depth: 0
-- uses: ever-guild/quality-bash@v1.0.0-alpha.3
+- uses: ever-guild/quality-bash@v1.0.0-alpha.4
 ```
 
 PRs compare against the target revision by default. The Action supplies summary metrics, outputs and diagnostic artifacts, using a fresh tool cache. Each Action invocation stores and uploads diagnostics from a fresh directory under `RUNNER_TEMP`, using `reports` as a relative subdirectory; absolute paths, traversal and upload patterns are rejected. Ordinary checks need no secrets or write permissions.
@@ -75,6 +79,6 @@ PRs compare against the target revision by default. The Action supplies summary 
 - Mutation operators: `[[ ]]` `==`/`!=`, `-eq`/`-ne`, `-lt`/`-ge`, `-gt`/`-le`, `&&`/`||`; binary arithmetic `+`/`-`, `*`→`+`, `<`/`>=`, `>`/`<=`, `==`/`!=`; literal `exit`/`return` `0`/`1`. Strings, comments and embedded languages are not mutated.
 - Invalid mutants are reported but excluded from the score. No valid mutants, timeouts or infrastructure errors fail qualification.
 - Run only trusted scripts, tests and helpers. They execute as your user; temporary copies are not sandboxes and cannot prevent deliberate falsification. Review fork code; isolate mutually untrusted workloads. Timeout cleanup kills process groups but cannot contain deliberate escapes.
-- Symlinks, special project files and commas in selected coverage paths are unsupported. Tool versions affect baseline compatibility; jobs and timeout affect report freshness, not baseline compatibility.
+- Symlinks, special project files and commas in selected coverage paths are unsupported. Tool versions affect baseline compatibility; timeout affects report freshness, not baseline compatibility.
 
 [Changes](changelog.md) · [Development](develop.md) · [Contributing](contributing.md)
