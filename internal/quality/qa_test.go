@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -41,7 +42,9 @@ exit 0
 	}
 	runner := Runner{Root: root, Reports: filepath.Join(root, "quality-reports"), Timeout: 20 * time.Second}
 	baselinePath := filepath.Join(root, "quality-baseline.json")
-	measurement, err := runner.Measure(context.Background(), selection, 2, baselinePath)
+	previousProcs := runtime.GOMAXPROCS(1)
+	defer runtime.GOMAXPROCS(previousProcs)
+	measurement, err := runner.Measure(context.Background(), selection, AutoJobs, baselinePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,9 +54,15 @@ exit 0
 	if err = UpdateBaseline(baselinePath, measurement, measurement.Fingerprint, true); err != nil {
 		t.Fatal(err)
 	}
-	fresh, err := runner.LoadFresh(context.Background(), selection, 2, baselinePath)
+	runtime.GOMAXPROCS(4) // A different auto worker count must not stale the report.
+	fresh, err := runner.LoadFresh(context.Background(), selection, baselinePath)
 	if err != nil {
 		t.Fatal(err)
+	}
+	changedTimeout := runner
+	changedTimeout.Timeout += time.Second
+	if _, err := changedTimeout.LoadFresh(context.Background(), selection, baselinePath); err == nil {
+		t.Fatal("changed timeout accepted")
 	}
 	if fresh.CoverageCounts != (Ratio{3, 5}) {
 		t.Fatalf("lost coverage counts: %+v", fresh.CoverageCounts)
@@ -71,7 +80,7 @@ exit 0
 	if err = os.WriteFile(filepath.Join(root, "example.bats"), []byte(tests+"\n# changed\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = runner.LoadFresh(context.Background(), selection, 2, baselinePath); err == nil {
+	if _, err = runner.LoadFresh(context.Background(), selection, baselinePath); err == nil {
 		t.Fatal("changed tests accepted")
 	}
 }

@@ -37,7 +37,7 @@ func TestProjectCannotLowerBaselineDuringGate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			settings, err := (quality.Runner{Timeout: 5 * time.Minute}).Settings(context.Background(), selection, 1)
+			settings, err := (quality.Runner{Timeout: 5 * time.Minute}).Settings(context.Background(), selection)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,7 +82,7 @@ func TestBaselineCheckRejectsForgedMeasurement(t *testing.T) {
 	reports := filepath.Join(root, "quality-reports")
 	baseline := filepath.Join(root, "quality-baseline.json")
 	runner := quality.Runner{Root: root, Reports: reports, Timeout: 5 * time.Minute}
-	settings, err := runner.Settings(context.Background(), selection, 1)
+	settings, err := runner.Settings(context.Background(), selection)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestBaselineCheckRejectsForgedMeasurement(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The forged report satisfies the old cache checks, proving the attack setup.
-	if _, err := runner.LoadFresh(context.Background(), selection, 1, baseline); err != nil {
+	if _, err := runner.LoadFresh(context.Background(), selection, baseline); err != nil {
 		t.Fatal(err)
 	}
 	if err := run(context.Background(), []string{"baseline", "check", "--root", root}); err == nil {
@@ -130,6 +130,16 @@ func TestCLIRejectsInvalidArguments(t *testing.T) {
 	for _, args := range [][]string{{"baseline"}, {"tools", "unknown"}, {"lint", "--timeout", "0s"}, {"mutation", "--jobs", "0"}, {"version", "extra"}} {
 		if err := run(context.Background(), args); err == nil {
 			t.Fatalf("accepted %v", args)
+		}
+	}
+}
+
+func TestCLIRejectsInvalidJobsBeforeTools(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	for _, value := range []string{"0", "-1", "", "AUTO", "1.5", "999999999999999999999999"} {
+		err := run(context.Background(), []string{"qa", "--jobs", value})
+		if err == nil || !strings.Contains(err.Error(), "jobs must be auto or a positive integer") {
+			t.Fatalf("%q: %v", value, err)
 		}
 	}
 }

@@ -10,11 +10,10 @@ import (
 type Settings struct {
 	Selection Selection `json:"selection"`
 	Method    Method    `json:"method"`
-	Jobs      int       `json:"jobs"`
 	Timeout   string    `json:"timeout"`
 }
 
-func (r Runner) Settings(ctx context.Context, s Selection, jobs int) (Settings, error) {
+func (r Runner) Settings(ctx context.Context, s Selection) (Settings, error) {
 	versions, err := Doctor(ctx, r.Timeout, nil)
 	if err != nil {
 		return Settings{}, err
@@ -23,7 +22,7 @@ func (r Runner) Settings(ctx context.Context, s Selection, jobs int) (Settings, 
 	for _, tool := range versions {
 		tools[tool.Name] = tool.Version
 	}
-	return Settings{Selection: s, Jobs: jobs, Timeout: r.Timeout.String(), Method: Method{
+	return Settings{Selection: s, Timeout: r.Timeout.String(), Method: Method{
 		Coverage: CoverageMethod{Algorithm: "kcov-ps4-cobertura-lines-v1"}, Tools: tools, Mutation: MutationMethodSettings{Algorithm: MutationMethod,
 			Operators: []string{"condition", "arithmetic", "return-code"},
 			Parser:    Parser{Name: "mvdan.cc/sh/v3", Version: "v3.12.0"}},
@@ -41,7 +40,7 @@ func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath
 	if err := WriteJSON(filepath.Join(r.Reports, "measurement.json"), map[string]bool{"qualified": false}); err != nil {
 		return m, err
 	}
-	settings, err := r.Settings(ctx, s, jobs)
+	settings, err := r.Settings(ctx, s)
 	if err != nil {
 		return m, err
 	}
@@ -77,7 +76,7 @@ func (r Runner) Measure(ctx context.Context, s Selection, jobs int, baselinePath
 	}
 	return m, nil
 }
-func (r Runner) LoadFresh(ctx context.Context, s Selection, jobs int, baselinePath string) (Measurement, error) {
+func (r Runner) LoadFresh(ctx context.Context, s Selection, baselinePath string) (Measurement, error) {
 	var m Measurement
 	if err := ValidateOutputPaths(r.Root, r.Reports, baselinePath, s); err != nil {
 		return m, err
@@ -85,7 +84,7 @@ func (r Runner) LoadFresh(ctx context.Context, s Selection, jobs int, baselinePa
 	if err := ReadJSON(filepath.Join(r.Reports, "measurement.json"), &m); err != nil {
 		return m, err
 	}
-	settings, err := r.Settings(ctx, s, jobs)
+	settings, err := r.Settings(ctx, s)
 	if err != nil {
 		return m, err
 	}

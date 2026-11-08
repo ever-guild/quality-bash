@@ -20,7 +20,7 @@ Common options:
   --test PATH      Select a Bats file (repeatable)
   --reports PATH   Reports directory relative to root
   --baseline PATH Baseline file relative to root
-  --jobs N         Parallel mutation workers
+  --jobs auto|N    Parallel mutation workers (default auto)
   --timeout TIME   Timeout per external process, e.g. 30s
 
 Use quality-bash <command> --help for options and baseline operations.

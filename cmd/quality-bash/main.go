@@ -82,7 +82,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	root := flags.String("root", ".", "project root")
 	reports := flags.String("reports", "quality-reports", "diagnostics directory relative to root")
 	timeout := flags.Duration("timeout", 5*time.Minute, "timeout per external process")
-	jobs := flags.Int("jobs", 1, "parallel mutation workers")
+	jobsFlag := flags.String("jobs", "auto", "parallel mutation workers: auto or a positive integer")
 	var scripts, tests paths
 	flags.Var(&scripts, "script", "selected Bash file (repeatable)")
 	flags.Var(&tests, "test", "selected Bats file (repeatable)")
@@ -98,8 +98,9 @@ func run(ctx context.Context, args []string) (returnErr error) {
 	if *timeout <= 0 {
 		return fmt.Errorf("timeout must be positive")
 	}
-	if *jobs < 1 {
-		return fmt.Errorf("jobs must be positive")
+	jobs, err := quality.ParseJobs(*jobsFlag)
+	if err != nil {
+		return err
 	}
 	if (*create || *migrate != "") && command != "baseline-update" {
 		return fmt.Errorf("--create and --migrate require baseline-update")
@@ -173,12 +174,6 @@ func run(ctx context.Context, args []string) (returnErr error) {
 			return err
 		}
 	}
-	if *timeout <= 0 {
-		return fmt.Errorf("timeout must be positive")
-	}
-	if *jobs < 1 {
-		return fmt.Errorf("jobs must be positive")
-	}
 	if args[0] == "doctor" {
 		_, err := quality.Doctor(ctx, *timeout, os.Stdout)
 		return err
@@ -233,9 +228,9 @@ func run(ctx context.Context, args []string) (returnErr error) {
 			}
 		}
 		if command == "qa" || command == "baseline check" {
-			measurement, err = runner.Measure(ctx, selection, *jobs, baselinePath)
+			measurement, err = runner.Measure(ctx, selection, jobs, baselinePath)
 		} else {
-			measurement, err = runner.LoadFresh(ctx, selection, *jobs, baselinePath)
+			measurement, err = runner.LoadFresh(ctx, selection, baselinePath)
 		}
 		if err != nil {
 			return err
@@ -272,7 +267,7 @@ func run(ctx context.Context, args []string) (returnErr error) {
 		return runner.Lint(ctx, selection)
 	}
 	if args[0] == "mutation" {
-		report, err := runner.Mutate(ctx, selection, *jobs)
+		report, err := runner.Mutate(ctx, selection, jobs)
 		if err == nil {
 			fmt.Printf("mutation: %d/%d\n", report.Score.Numerator, report.Score.Denominator)
 		}

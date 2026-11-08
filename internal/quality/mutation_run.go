@@ -52,8 +52,8 @@ func copyProject(root, dest, reports string) error {
 }
 func (r Runner) Mutate(ctx context.Context, s Selection, jobs int) (MutationReport, error) {
 	report := MutationReport{}
-	if jobs < 1 {
-		return report, fmt.Errorf("jobs must be positive")
+	if jobs < 0 {
+		return report, fmt.Errorf("jobs must be auto or positive")
 	}
 	if err := os.MkdirAll(r.Reports, 0755); err != nil {
 		return report, err
@@ -98,7 +98,8 @@ func (r Runner) Mutate(ctx context.Context, s Selection, jobs int) (MutationRepo
 	}
 	queue := make(chan int)
 	var wg sync.WaitGroup
-	for worker := 0; worker < jobs; worker++ {
+	workers := mutationWorkers(jobs, len(report.Mutations))
+	for worker := 0; worker < workers; worker++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
