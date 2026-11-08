@@ -55,13 +55,26 @@ runs:
         QB_REPORTS: ${{ inputs.reports }}
       run: |
         case "$QB_REPORTS" in
-          /*) path="$QB_REPORTS" ;;
-          *) path="$QB_ROOT/$QB_REPORTS" ;;
+          ''|/*) echo 'reports must be a nonempty relative path' >&2; exit 1 ;;
         esac
-        if [[ "$path" == *$'\n'* || "$path" == *$'\r'* ]]; then
-          echo 'Report paths containing newlines are unsupported by the Action' >&2
+        case "/$QB_REPORTS/" in
+          */../*) echo 'reports cannot contain parent traversal' >&2; exit 1 ;;
+        esac
+        case "$QB_ROOT/$QB_REPORTS" in
+          *$'\n'*|*$'\r'*) echo 'Report paths cannot contain line breaks' >&2; exit 1 ;;
+        esac
+        root=$(realpath -e -- "$QB_ROOT")
+        parent=$(realpath -m -- "$root/$QB_REPORTS")
+        if [[ "$parent" != "$root/"* ]]; then
+          echo 'reports must stay inside the project root' >&2
           exit 1
         fi
+        case "$parent" in
+          *$'\n'*|*$'\r'*|*'*'*|*'?'*|*'['*|*']'*|*'!'*)
+            echo 'Report paths cannot contain line breaks or upload patterns' >&2; exit 1 ;;
+        esac
+        mkdir -p -- "$parent"
+        path=$(mktemp -d "$parent/quality-bash.XXXXXXXX")
         echo "path=$path" >> "$GITHUB_OUTPUT"
     - name: Download release binary
       id: binary
@@ -70,8 +83,8 @@ runs:
         RUNNER_ARCH_VALUE: ${{ runner.arch }}
       run: |
         case "$RUNNER_ARCH_VALUE" in
-          X64) arch=amd64; digest=38f25ff8d62072cfb381e8cc084b7165fd47b7c8ca0ead5a8f156cd47e0469bf ;;
-          ARM64) arch=arm64; digest=7cef9a574ae2c119f046c8808446e82a0b60b667fef7997afa172adb46f7acf2 ;;
+          X64) arch=amd64; digest=2549eb0a507e1400127106aa9716a54262e29d6a7b94f758e3bed032fa1c7136 ;;
+          ARM64) arch=arm64; digest=04b47649ae5d70e2dda74ff7f9bee495dc17f5b27a6bffa08581e5eb21401f71 ;;
           *) echo 'Unsupported runner architecture' >&2; exit 1 ;;
         esac
         directory=$(mktemp -d "$RUNNER_TEMP/quality-bash.XXXXXXXX")
@@ -102,7 +115,7 @@ runs:
         QB_SCRIPTS: ${{ inputs.scripts }}
         QB_TESTS: ${{ inputs.tests }}
         QB_BASELINE: ${{ inputs.baseline }}
-        QB_REPORTS: ${{ inputs.reports }}
+        QB_REPORTS: ${{ steps.reports.outputs.path }}
         QB_BASE_REVISION: ${{ inputs.base-revision }}
         QB_JOBS: ${{ inputs.jobs }}
         QB_TIMEOUT: ${{ inputs.timeout }}
@@ -122,7 +135,7 @@ runs:
         done <<< "$QB_TESTS"
         "$QB_BINARY" "${args[@]}"
     - name: Preserve diagnostics
-      if: always()
+      if: always() && steps.reports.outcome == 'success'
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.binary.outputs.artifact || format('quality-bash-{0}-{1}-{2}', github.job, runner.arch, github.run_attempt) }}

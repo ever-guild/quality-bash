@@ -67,7 +67,7 @@ Scope and methodology must match. Changing them requires fresh measurements and 
 - uses: ever-guild/quality-bash@v1.0.0-alpha.3
 ```
 
-PRs compare against the target revision by default. The Action supplies summary metrics, outputs and diagnostic artifacts, using a fresh tool cache. Ordinary checks need no secrets or write permissions.
+PRs compare against the target revision by default. The Action supplies summary metrics, outputs and diagnostic artifacts, using a fresh tool cache. Each Action invocation stores and uploads diagnostics from a new subdirectory under its root-relative `reports` path; absolute paths, traversal and upload patterns are rejected. Ordinary checks need no secrets or write permissions.
 
 ## Measurement and limits
 
