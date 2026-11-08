@@ -45,12 +45,12 @@ Alternatively, use the Action, which also checks the target branch’s baseline 
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: ever-guild/quality-bash@v1.0.0-alpha.4
+- uses: ever-guild/quality-bash@v1.0.0-alpha.5
 ```
 
 ## Limits
 
 - Run only trusted scripts, tests and helpers: they execute as your user, without a sandbox
 - Coverage measures Bash lines, not code inside awk/jq, kcov may mix coverage for byte-identical files
-- Mutation testing changes supported conditions, arithmetic and exit codes, timeouts, tool failures or no valid mutants fail the check
+- After successful control runs, mutants stop at the first Bats failure, including setup/teardown; timeouts, runner errors and malformed reports still fail the check
 - Symlinks, special files and commas in coverage paths are unsupported

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.0-alpha.5
+
+- Stop each mutant at the first Bats failure after full successful original/control runs. Setup/teardown failures count as detection; timeouts, cancellation, runner errors and malformed TAP still block qualification.
+- Keep full execution for surviving mutants, ordinary tests and coverage. No mutants or thresholds are removed.
+- Run `qa` once after upgrading: old measurements are stale; the baseline format and thresholds remain compatible.
+
 ## v1.0.0-alpha.4
 
 - Default CLI and Action mutation parallelism to `jobs: auto`; use Go runtime CPU/container settings and cap workers at the mutant count. Explicit positive worker counts remain supported.
