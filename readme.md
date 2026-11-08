@@ -39,14 +39,9 @@ make quality-bash-fix                     # update baseline after improvements
 make quality-bash ARGS='--timeout 3m'
 ```
 
-Copy [example/.github/workflows/qa.yml](example/.github/workflows/qa.yml) to `.github/workflows/qa.yml` to run the same make command in CI, it checks the checked-out baseline
+Copy [example/.github/workflows/qa-via-make.yml](example/.github/workflows/qa-via-make.yml) to `.github/workflows/qa.yml` to run the same make command in CI, it checks the checked-out baseline
 
-Alternatively, use the Action, which also checks the target branch’s baseline on PRs:
-
-```yaml
-- uses: actions/checkout@v7
-- uses: ever-guild/quality-bash@v1.0.0-alpha.5
-```
+Alternatively, copy [qa-via-action.yml](example/.github/workflows/qa-via-action.yml) to `.github/workflows/qa.yml` to use our Action, which also checks the target branch’s baseline on PRs. Choose one workflow to avoid duplicate checks.
 
 ## Limits
 
