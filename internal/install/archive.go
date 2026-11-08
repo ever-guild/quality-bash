@@ -116,7 +116,20 @@ func ExtractSourceTarGzip(reader io.Reader, destination, omitDirectory string) e
 		return err
 	}
 	defer compressed.Close()
-	archive := tar.NewReader(&archiveBudgetReader{reader: compressed, remaining: maxArchive})
+	return extractTar(compressed, destination, omitDirectory, Package{})
+}
+
+func extractPackageTarGzip(reader io.Reader, destination string, p Package) error {
+	compressed, err := gzip.NewReader(reader)
+	if err != nil {
+		return err
+	}
+	defer compressed.Close()
+	return extractTar(compressed, destination, "", p)
+}
+
+func extractTar(reader io.Reader, destination, omitDirectory string, p Package) error {
+	archive := tar.NewReader(&archiveBudgetReader{reader: reader, remaining: maxArchive})
 	var total int64
 	entryCount, componentCount := 0, 0
 	for {
@@ -142,6 +155,30 @@ func ExtractSourceTarGzip(reader io.Reader, destination, omitDirectory string) e
 		}
 		if omitDirectory != "" && (name == omitDirectory || strings.HasPrefix(name, omitDirectory+string(filepath.Separator))) {
 			continue
+		}
+		if header.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
+		if p.StripPrefix != "" {
+			if name == p.StripPrefix {
+				continue
+			}
+			if !strings.HasPrefix(name, p.StripPrefix+"/") {
+				return fmt.Errorf("unexpected archive prefix %s", name)
+			}
+			name = strings.TrimPrefix(name, p.StripPrefix+"/")
+		}
+		if len(p.Include) != 0 {
+			include := false
+			for _, prefix := range p.Include {
+				if name == prefix || strings.HasPrefix(name, prefix+"/") {
+					include = true
+					break
+				}
+			}
+			if !include {
+				continue
+			}
 		}
 		path := filepath.Join(destination, name)
 		switch header.Typeflag {

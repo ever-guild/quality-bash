@@ -12,14 +12,25 @@ import (
 	"strings"
 )
 
+type Artifact struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	URL     string `json:"url"`
+	SHA256  string `json:"sha256"`
+}
+
 type Package struct {
-	Name        string   `json:"name"`
-	Version     string   `json:"version"`
-	OS          string   `json:"os"`
-	Arch        string   `json:"arch"`
-	URL         string   `json:"url"`
-	SHA256      string   `json:"sha256"`
-	Executables []string `json:"executables"`
+	Format       string     `json:"format,omitempty"`
+	StripPrefix  string     `json:"stripPrefix,omitempty"`
+	Include      []string   `json:"include,omitempty"`
+	Dependencies []Artifact `json:"dependencies,omitempty"`
+	Name         string     `json:"name"`
+	Version      string     `json:"version"`
+	OS           string     `json:"os"`
+	Arch         string     `json:"arch"`
+	URL          string     `json:"url"`
+	SHA256       string     `json:"sha256"`
+	Executables  []string   `json:"executables"`
 }
 
 func (p Package) Validate() error {
@@ -29,6 +40,23 @@ func (p Package) Validate() error {
 	}
 	if p.OS != "linux" || (p.Arch != "amd64" && p.Arch != "arm64") {
 		return fmt.Errorf("unsupported package platform")
+	}
+	if p.Format != "" && p.Format != "tar.gz" && p.Format != "deb" {
+		return fmt.Errorf("unsupported package format")
+	}
+	if p.Format == "deb" && (p.Name != "kcov" || p.StripPrefix != "" || len(p.Include) != 0) {
+		return fmt.Errorf("invalid Debian package configuration")
+	}
+	if p.Format != "deb" && len(p.Dependencies) != 0 {
+		return fmt.Errorf("dependencies require Debian format")
+	}
+	if p.StripPrefix != "" && (!filepath.IsLocal(p.StripPrefix) || p.StripPrefix == ".") {
+		return fmt.Errorf("invalid archive prefix")
+	}
+	for _, path := range p.Include {
+		if !filepath.IsLocal(path) || path == "." {
+			return fmt.Errorf("invalid archive selection")
+		}
 	}
 	if len(p.Executables) == 0 {
 		return fmt.Errorf("package has no executables")
@@ -41,6 +69,9 @@ func (p Package) Validate() error {
 	return nil
 }
 func InstallPackage(ctx context.Context, cache string, p Package) (string, error) {
+	if p.Format == "deb" {
+		return installKcov(ctx, cache, p)
+	}
 	return installPackage(ctx, cache, p, "")
 }
 func InstallLocalPackage(ctx context.Context, cache string, p Package, archive string) (string, error) {
@@ -57,7 +88,7 @@ func installPackage(ctx context.Context, cache string, p Package, localArchive s
 	if err := os.MkdirAll(parent, 0700); err != nil {
 		return "", err
 	}
-	target := filepath.Join(parent, p.Version+"-"+p.OS+"-"+p.Arch)
+	target := packageRoot(cache, p)
 	if _, err := os.Lstat(target); err == nil {
 		return "", fmt.Errorf("package already installed: %s", target)
 	} else if !os.IsNotExist(err) {
@@ -104,7 +135,7 @@ func installPackage(ctx context.Context, cache string, p Package, localArchive s
 	if err != nil {
 		return "", err
 	}
-	extractErr := ExtractTarGzip(archive, content)
+	extractErr := extractPackageTarGzip(archive, content, p)
 	archive.Close()
 	if extractErr != nil {
 		return "", extractErr

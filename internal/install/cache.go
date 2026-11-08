@@ -13,7 +13,7 @@ func CacheRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(root, "quality-bash", "tools"), nil
+	return filepath.Join(root, "quality-bash"), nil
 }
 
 // InstalledPaths verifies the archive identity and expected executable layout.
@@ -25,12 +25,12 @@ func InstalledPaths(cache string, manifest Manifest) ([]string, error) {
 		if p.OS != runtime.GOOS || p.Arch != runtime.GOARCH {
 			continue
 		}
-		root := filepath.Join(cache, p.Name, p.Version+"-"+p.OS+"-"+p.Arch)
+		root := packageRoot(cache, p)
 		marker, err := os.ReadFile(filepath.Join(root, ".archive-sha256"))
 		if err != nil {
 			return nil, fmt.Errorf("%s not installed: run tools install: %w", p.Name, err)
 		}
-		if strings.TrimSpace(string(marker)) != p.SHA256 {
+		if strings.TrimSpace(string(marker)) != packageDigest(p) {
 			return nil, fmt.Errorf("cached %s differs from pinned archive", p.Name)
 		}
 		for _, exe := range p.Executables {

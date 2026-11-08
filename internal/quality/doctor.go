@@ -17,18 +17,38 @@ type ToolVersion struct {
 	Diagnostic string `json:"diagnostic,omitempty"`
 }
 
-// These are the minimum API versions understood by the process adapters.
+type toolSpec struct {
+	name, pattern string
+	minimum       []int
+}
+
+var bashSpec = toolSpec{"bash", `version (\d+\.\d+[^\s]*)`, []int{5, 2}}
+
+// CheckBash checks the user's PATH before any managed tools are installed or added.
+func CheckBash(ctx context.Context, timeout time.Duration) error {
+	_, err := checkTools(ctx, timeout, nil, []toolSpec{bashSpec})
+	if err != nil {
+		return fmt.Errorf("system Bash >= 5.2 is required; install or upgrade it yourself: %w", err)
+	}
+	return nil
+}
+
+func CheckKcov(ctx context.Context, timeout time.Duration) error {
+	_, err := checkTools(ctx, timeout, nil, []toolSpec{{"kcov", `(?:kcov |version: )(\d+[^\s]*)`, []int{43}}})
+	return err
+}
+
 // Exact installed versions are retained in measurement metadata.
 func Doctor(ctx context.Context, timeout time.Duration, output io.Writer) ([]ToolVersion, error) {
-	specs := []struct {
-		name, pattern string
-		minimum       []int
-	}{
-		{"bash", `version (\d+\.\d+[^\s]*)`, []int{5, 2}},
+	return checkTools(ctx, timeout, output, []toolSpec{
+		bashSpec,
 		{"bats", `Bats (\d+\.\d+\.\d+[^\s]*)`, []int{1, 10, 0}},
 		{"shellcheck", `version: (\d+\.\d+\.\d+[^\s]*)`, []int{0, 9, 0}},
 		{"kcov", `(?:kcov |version: )(\d+[^\s]*)`, []int{43}},
-	}
+	})
+}
+
+func checkTools(ctx context.Context, timeout time.Duration, output io.Writer, specs []toolSpec) ([]ToolVersion, error) {
 	var versions []ToolVersion
 	failed := false
 	for _, spec := range specs {

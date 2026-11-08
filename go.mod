@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+	github.com/ulikunitz/xz v0.5.17
 	mvdan.cc/sh/v3 v3.12.0
 )
 
