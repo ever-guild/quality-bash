@@ -1,0 +1,21 @@
+name: QA
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Install quality-bash
+        run: make quality-bash-install
+      - name: Check quality
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+        run: make quality-bash-qa ARGS="${BASE_REVISION:+--base-revision $BASE_REVISION}"
